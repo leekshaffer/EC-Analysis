@@ -3,7 +3,18 @@ require(readxl)
 
 ## Importing Apportionment Data:
 Abb <- read_excel(path="data/StateAbbrevs.xlsx")
-EC <- read_excel(path="data/ECvotes.xlsx") %>%
+ECVotes <- read_excel(path="data/ECvotes.xlsx")
+EC <- ECVotes %>%
+  pivot_longer(cols=!State,
+               names_to="Year",
+               values_to="EC") %>%
+  mutate(Year=as.numeric(Year)) %>%
+  left_join(Abb, by="State")
+EC_State <- ECVotes %>%
+  mutate(State=substr(State,1,2)) %>%
+  group_by(State) %>% 
+  dplyr::summarize(across(everything(), sum)) %>%
+  ungroup()  %>%
   pivot_longer(cols=!State,
                names_to="Year",
                values_to="EC") %>%
@@ -26,4 +37,4 @@ House <- unique(House %>% dplyr::select(State)) %>%
   left_join(Abb, by="State") %>%
   dplyr::mutate(House=replace_na(House, 0))
 
-save(list=c("EC","House"), file="int/Apportion.Rda")
+save(list=c("EC","EC_State","House"), file="int/Apportion.Rda")
