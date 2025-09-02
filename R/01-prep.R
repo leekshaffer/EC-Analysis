@@ -37,4 +37,4 @@ House <- unique(House %>% dplyr::select(State)) %>%
   left_join(Abb, by="State") %>%
   dplyr::mutate(House=replace_na(House, 0))
 
-save(list=c("EC","EC_State","House"), file="int/Apportion.Rda")
+save(list=c("Abb", "EC","EC_State","House"), file="int/Apportion.Rda")
