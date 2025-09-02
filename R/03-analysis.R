@@ -1,4 +1,4 @@
-require(tidyverse)
+library(tidyverse)
 load("int/Apportion.Rda")
 
 Analyze_List <- function(Name, Use_CD=TRUE) {
@@ -7,8 +7,8 @@ Analyze_List <- function(Name, Use_CD=TRUE) {
   Group_Cols <- Obj$VarNames
   Group_Cols_Prop <- paste0(Group_Cols, "_Prop")
   
-  Rows <- c("Pop: DC Only", "Pop: Without DC", "Pop: With PR", 
-            "House: Without DC", "House: With DC",
+  Rows <- c("Population", "Pop: Without DC", "Pop: With PR", 
+            "House", "House: With DC",
             "Senate", "EC")
   
   if (Use_CD) {
@@ -38,7 +38,7 @@ Analyze_List <- function(Name, Use_CD=TRUE) {
       bind_rows(CD %>% dplyr::filter(State %in% c("Maine","Nebraska")) %>%
                   dplyr::mutate(State=paste(State,CD,sep="-"),
                                 EC=1) %>%
-                  dplyr::select(c("State",Group_Cols_Prop,EC)))
+                  dplyr::select(all_of(c("State",Group_Cols_Prop,EC))))
     
     Totals <- tibble(Analysis=Rows[1:3]) %>%
       bind_cols(bind_rows(CD %>% dplyr::filter(Postal != "PR") %>%

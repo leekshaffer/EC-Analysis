@@ -1,5 +1,5 @@
-require(tidyverse)
-require(readxl)
+library(tidyverse)
+library(readxl)
 
 ## Importing Apportionment Data:
 Abb <- read_excel(path="data/StateAbbrevs.xlsx")
