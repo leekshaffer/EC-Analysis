@@ -18,14 +18,15 @@ library(tidyverse)
 
 ## Race/Ethnicity Category 2020:
 RE_cols <- c(Total="P11_001N",
-             Hispanic="P11_002N",
              White="P11_005N",
+             Hispanic="P11_002N",
              Black="P11_006N",
-             AIAN="P11_007N",
              Asian="P11_008N",
+             Multiple="P11_011N",
+             AIAN="P11_007N",
              NHOPI="P11_009N",
-             Other="P11_010N",
-             Multiple="P11_011N")
+             Other="P11_010N"
+             )
 Adult_RE_2020_State <- get_decennial(geography="state", 
                              variables=RE_cols,
                              year=2020, sumfile="dhc",
@@ -48,14 +49,14 @@ save(Adult_RE_2020,
      file="int/Adult_RE_2020.Rda")
 
 ## Race/Ethnicity Full Pop 2020:
-RE_pop_cols <- c(Hispanic="P12H_001N",
-             White="P12I_001N",
-             Black="P12J_001N",
-             AIAN="P12K_001N",
-             Asian="P12L_001N",
-             NHOPI="P12M_001N",
-             Other="P12N_001N",
-             Multiple="P12O_001N")
+RE_pop_cols <- c(White="P12I_001N",
+                 Hispanic="P12H_001N",
+                 Black="P12J_001N",
+                 Asian="P12L_001N",
+                 Multiple="P12O_001N",
+                 AIAN="P12K_001N",
+                 NHOPI="P12M_001N",
+                 Other="P12N_001N")
 Pop_RE_2020_State <- get_decennial(geography="state", 
                                      variables=RE_pop_cols,
                                      year=2020, sumfile="dhc",
@@ -406,24 +407,26 @@ save(Pop_UR_2000,
 
 ## Race and Ethnicity:
 RE_2010 <- c(Total="P005001",
-             Hispanic="P005010",
              White="P005003",
+             Hispanic="P005010",
              Black="P005004",
-             AIAN="P005005",
              Asian="P005006",
+             Multiple="P005009",
+             AIAN="P005005",
              NHOPI="P005007",
-             Other="P005008",
-             Multiple="P005009")
+             Other="P005008"
+             )
 
 RE_2000 <- c(Total="P004001",
-             Hispanic="P004002",
              White="P004005",
+             Hispanic="P004002",
              Black="P004006",
-             AIAN="P004007",
              Asian="P004008",
+             Multiple="P004011",
+             AIAN="P004007",
              NHOPI="P004009",
-             Other="P004010",
-             Multiple="P004011")
+             Other="P004010"
+             )
 
 Pop_RE_2010_CD <- get_decennial(geography="congressional district", 
                                 variables=RE_2010,

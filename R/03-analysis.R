@@ -1,7 +1,7 @@
 library(tidyverse)
 load("int/Apportion.Rda")
 
-Analyze_List <- function(Name, Use_CD=TRUE) {
+Analyze_List <- function(Name, Use_CD=TRUE, Referent=NULL) {
   load(file=paste0("int/",Name,".Rda"))
   Obj <- get(Name)
   Group_Cols <- Obj$VarNames
@@ -137,18 +137,34 @@ Analyze_List <- function(Name, Use_CD=TRUE) {
                        as_tibble(t(apply(Combos, 1, 
                    FUN=function(x) unlist((Proportions %>% dplyr::filter(Analysis==x["Numerator"]) %>% dplyr::select(-Analysis))/
                      (Proportions %>% dplyr::filter(Analysis==x["Denominator"]) %>% dplyr::select(-Analysis))))),
-                   .name_repair="minimal"))
+                   .name_repair="minimal")) %>%
+    dplyr::rename_with(~str_remove(., "_Prop$"))
+  
+  if (is.null(Referent)) {
+    Referent <- (Group_Cols[Group_Cols != "Total"])[which.max(as.numeric(
+      Proportions[Proportions$Analysis=="Population", 
+                  Group_Cols_Prop[Group_Cols_Prop != "Total_Prop"]]))]
+    ## Gets the column with the max proportion as the referent
+  }
+  
+  Rel_Weights <- Weights %>% 
+    dplyr::mutate(Reference=get(Referent)) %>%
+    dplyr::mutate(across(all_of(Group_Cols),
+                         ~.x/Reference)) %>%
+    dplyr::select(-c("Total","Reference"))
   
   Excess_Pops <- bind_cols(Combos,
                                  as_tibble(t(apply(Weights, 1, 
-                                         function(x) (as.numeric(x[Group_Cols_Prop])-1)*
+                                         function(x) (as.numeric(x[Group_Cols])-1)*
                                            as.numeric(Totals[Totals$Analysis==unlist(x["Denominator"]),Group_Cols]))),
                                          .name_repair="minimal"))
   colnames(Excess_Pops) <- colnames(Weights)
   
   Res <- list(Proportions=Proportions, 
-              Weights=Weights, 
-              Excess_Pops=Excess_Pops)
+              Weights=Weights,
+              Referent=Referent,
+              Relative=Rel_Weights,
+              Excess=Excess_Pops)
   assign(x=paste(Name, "Res", sep="_"),
          value=Res)
   save(list=paste(Name, "Res", sep="_"),
@@ -186,27 +202,43 @@ Analyze_List <- function(Name, Use_CD=TRUE) {
   #             Data=dat))
 }
 
-Adult_RE_2020_Res <- Analyze_List("Adult_RE_2020")
-Pop_RE_2020_Res <- Analyze_List("Pop_RE_2020")
-Pop_UR_2020_Res <- Analyze_List("Pop_UR_2020")
-Pop_Sex_2020_Res <- Analyze_List("Pop_Sex_2020")
-Pop_Age_2020_Res <- Analyze_List("Pop_Age_2020")
-Adult_Age_2020_Res <- Analyze_List("Adult_Age_2020")
-Pop_AgeCat_2020_Res <- Analyze_List("Pop_AgeCat_2020")
-Adult_AgeCat_2020_Res <- Analyze_List("Adult_AgeCat_2020")
-HH_RO_2020_Res <- Analyze_List("HH_RO_2020")
+HH_RO_2020_Res <- Analyze_List("HH_RO_2020", Use_CD=TRUE,
+                               Referent="Renter")
+Pop_RE_2020_Res <- Analyze_List("Pop_RE_2020", Use_CD=TRUE,
+                                Referent="White")
+Pop_UR_2020_Res <- Analyze_List("Pop_UR_2020", Use_CD=TRUE,
+                                Referent="Urban")
+Pop_Sex_2020_Res <- Analyze_List("Pop_Sex_2020", Use_CD=TRUE,
+                                 Referent="Female")
+Pop_AgeCat_2020_Res <- Analyze_List("Pop_AgeCat_2020", Use_CD=TRUE,
+                                    Referent="0-17")
+# Adult_RE_2020_Res <- Analyze_List("Adult_RE_2020", Use_CD=TRUE,
+#                                   Referent="White")
+# Pop_Age_2020_Res <- Analyze_List("Pop_Age_2020")
+# Adult_Age_2020_Res <- Analyze_List("Adult_Age_2020")
+# Adult_AgeCat_2020_Res <- Analyze_List("Adult_AgeCat_2020")
 
-HH_RO_2010_Res <- Analyze_List("HH_RO_2010")
-Pop_RE_2010_Res <- Analyze_List("Pop_RE_2010")
-Pop_UR_2010_Res <- Analyze_List("Pop_UR_2010")
-Pop_Sex_2010_Res <- Analyze_List("Pop_Sex_2010")
-Pop_AgeCat_2010_Res <- Analyze_List("Pop_AgeCat_2010")
-Pop_Age_2010_Res <- Analyze_List("Pop_Age_2010")
+HH_RO_2010_Res <- Analyze_List("HH_RO_2010", Use_CD=TRUE,
+                               Referent="Renter")
+Pop_RE_2010_Res <- Analyze_List("Pop_RE_2010", Use_CD=TRUE,
+                                Referent="White")
+Pop_UR_2010_Res <- Analyze_List("Pop_UR_2010", Use_CD=TRUE,
+                                Referent="Urban")
+Pop_Sex_2010_Res <- Analyze_List("Pop_Sex_2010", Use_CD=TRUE,
+                                 Referent="Female")
+Pop_AgeCat_2010_Res <- Analyze_List("Pop_AgeCat_2010", Use_CD=TRUE,
+                                    Referent="0-17")
+# Pop_Age_2010_Res <- Analyze_List("Pop_Age_2010")
 
-HH_RO_2000_Res <- Analyze_List("HH_RO_2000", Use_CD=FALSE)
-Pop_RE_2000_Res <- Analyze_List("Pop_RE_2000", Use_CD=FALSE)
-Pop_UR_2000_Res <- Analyze_List("Pop_UR_2000", Use_CD=FALSE)
-Pop_Sex_2000_Res <- Analyze_List("Pop_Sex_2000", Use_CD=FALSE)
-Pop_AgeCat_2000_Res <- Analyze_List("Pop_AgeCat_2000", Use_CD=FALSE)
-Pop_Age_2000_Res <- Analyze_List("Pop_Age_2000", Use_CD=FALSE)
+HH_RO_2000_Res <- Analyze_List("HH_RO_2000", Use_CD=FALSE,
+                               Referent="Renter")
+Pop_RE_2000_Res <- Analyze_List("Pop_RE_2000", Use_CD=FALSE,
+                                Referent="White")
+Pop_UR_2000_Res <- Analyze_List("Pop_UR_2000", Use_CD=FALSE,
+                                Referent="Urban")
+Pop_Sex_2000_Res <- Analyze_List("Pop_Sex_2000", Use_CD=FALSE,
+                                 Referent="Female")
+Pop_AgeCat_2000_Res <- Analyze_List("Pop_AgeCat_2000", Use_CD=FALSE,
+                                    Referent="0-17")
+# Pop_Age_2000_Res <- Analyze_List("Pop_Age_2000", Use_CD=FALSE)
 
