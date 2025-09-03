@@ -2,7 +2,7 @@ library(tidyverse)
 load("int/Apportion.Rda")
 
 Analyze_List <- function(Name, Use_CD=TRUE, Referent=NULL) {
-  load(file=paste0("int/",Name,".Rda"))
+  load(file=paste0("int/","Census/",Name,".Rda"))
   Obj <- get(Name)
   Group_Cols <- Obj$VarNames
   Group_Cols_Prop <- paste0(Group_Cols, "_Prop")
