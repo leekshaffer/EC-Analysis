@@ -157,7 +157,15 @@ for (name in Names) {
 }
 ggsave(filename="figs/Trend_Plot_Full.png",
        plot=p_big,
-       width=14, height=6, units="in", dpi=300, device=png)
+       width=9, height=6.5, units="in", dpi=300, device=png)
+
+p_med <- NULL
+for (name in Names[c(1,4,5)]) {
+  p_med <- p_med | get(paste(name, "Plot", "Col", sep="_"))
+}
+ggsave(filename="figs/Trend_Plot_Three.png",
+       plot=p_med,
+       width=8.8, height=5.8, units="in", dpi=300, device=png)
 
 # Proportion Plots
 Props_Use <- c("EC", "Senate", "House", "Population")
