@@ -38,7 +38,7 @@ Analyze_List <- function(Name, Use_CD=TRUE) {
       bind_rows(CD %>% dplyr::filter(State %in% c("Maine","Nebraska")) %>%
                   dplyr::mutate(State=paste(State,CD,sep="-"),
                                 EC=1) %>%
-                  dplyr::select(all_of(c("State",Group_Cols_Prop,EC))))
+                  dplyr::select(c("State",all_of(Group_Cols_Prop),"EC")))
     
     Totals <- tibble(Analysis=Rows[1:3]) %>%
       bind_cols(bind_rows(CD %>% dplyr::filter(Postal != "PR") %>%
@@ -128,19 +128,22 @@ Analyze_List <- function(Name, Use_CD=TRUE) {
   }
   
   Combos <- as_tibble(expand.grid(Rows[4:7],
-                                   Rows[1:3])) %>%
+                                   Rows[1:3]),
+                      .name_repair="minimal") %>%
     mutate(Numerator=as.character(Var1), Denominator=as.character(Var2)) %>%
     dplyr::select(Numerator, Denominator)
   
   Weights <- bind_cols(Combos,
                        as_tibble(t(apply(Combos, 1, 
                    FUN=function(x) unlist((Proportions %>% dplyr::filter(Analysis==x["Numerator"]) %>% dplyr::select(-Analysis))/
-                     (Proportions %>% dplyr::filter(Analysis==x["Denominator"]) %>% dplyr::select(-Analysis)))))))
+                     (Proportions %>% dplyr::filter(Analysis==x["Denominator"]) %>% dplyr::select(-Analysis))))),
+                   .name_repair="minimal"))
   
   Excess_Pops <- bind_cols(Combos,
                                  as_tibble(t(apply(Weights, 1, 
                                          function(x) (as.numeric(x[Group_Cols_Prop])-1)*
-                                           as.numeric(Totals[Totals$Analysis==unlist(x["Denominator"]),Group_Cols])))))
+                                           as.numeric(Totals[Totals$Analysis==unlist(x["Denominator"]),Group_Cols]))),
+                                         .name_repair="minimal"))
   colnames(Excess_Pops) <- colnames(Weights)
   
   Res <- list(Proportions=Proportions, 

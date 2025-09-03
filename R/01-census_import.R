@@ -1,25 +1,31 @@
 library(tidycensus)
 library(tidyverse)
 
-v19 <- load_variables(2019, "acs1")
-v10sf1 <- load_variables(2010, "sf1")
-v00sf1 <- load_variables(2000, "sf1")
-v20dhc <- load_variables(2020, "dhc")
-v23 <- load_variables(2023, "acs1")
+# v19 <- load_variables(2019, "acs1")
+# v23 <- load_variables(2023, "acs1")
+# v00sf1 <- load_variables(2000, "sf1")
+# v10sf1 <- load_variables(2010, "sf1")
+# v20dhc <- load_variables(2020, "dhc")
+# 
+# save(list=c("v00sf1","v10sf1","v20dhc"),
+#      file="int/DecennialCensusVars.Rda")
+# 
+# save(list=c("v19","v23"),
+#      file="int/ACSVars.Rda")
 
 
 # 2020 Census DHC
 
 ## Race/Ethnicity Category 2020:
 RE_cols <- c(Total="P11_001N",
-             Hisp="P11_002N",
+             Hispanic="P11_002N",
              White="P11_005N",
              Black="P11_006N",
              AIAN="P11_007N",
              Asian="P11_008N",
              NHOPI="P11_009N",
              Other="P11_010N",
-             Multi="P11_011N")
+             Multiple="P11_011N")
 Adult_RE_2020_State <- get_decennial(geography="state", 
                              variables=RE_cols,
                              year=2020, sumfile="dhc",
@@ -42,24 +48,24 @@ save(Adult_RE_2020,
      file="int/Adult_RE_2020.Rda")
 
 ## Race/Ethnicity Full Pop 2020:
-RE_pop_cols <- c(Hisp="P12H_001N",
+RE_pop_cols <- c(Hispanic="P12H_001N",
              White="P12I_001N",
              Black="P12J_001N",
              AIAN="P12K_001N",
              Asian="P12L_001N",
              NHOPI="P12M_001N",
              Other="P12N_001N",
-             Multi="P12O_001N")
+             Multiple="P12O_001N")
 Pop_RE_2020_State <- get_decennial(geography="state", 
                                      variables=RE_pop_cols,
                                      year=2020, sumfile="dhc",
                                      output="wide") %>%
-  mutate(Total=Hisp+White+Black+AIAN+Asian+NHOPI+Other+Multi)
+  mutate(Total=Hispanic+White+Black+AIAN+Asian+NHOPI+Other+Multiple)
 Pop_RE_2020_CD <- get_decennial(geography="congressional district", 
                                   variables=RE_pop_cols,
                                   year=2020, sumfile="dhc",
                                   output="wide") %>% 
-  mutate(Total=Hisp+White+Black+AIAN+Asian+NHOPI+Other+Multi,
+  mutate(Total=Hispanic+White+Black+AIAN+Asian+NHOPI+Other+Multiple,
          State=str_split_i(NAME, ", ", 2),
          CD=substr(GEOID, 3, 4)) %>%
   dplyr::filter(CD != "ZZ")
@@ -175,7 +181,7 @@ Pop_Age_2020_State <- Pop_SA_2020_State %>%
   pivot_wider(id_cols=c("GEOID","NAME","Total"),
               names_from="AgeCat", values_from="Pop")
 Pop_AgeCat_2020_State <- Pop_SA_2020_State %>%
-  mutate(AgeCat=if_else(Max < 18, "Under 18",
+  mutate(AgeCat=if_else(Max < 18, "0-17",
                         if_else(Max < 40, "18-39",
                                 if_else(Max < 65, "40-64", "65+")))) %>%
   group_by(GEOID,NAME,Total,AgeCat) %>%
@@ -189,7 +195,7 @@ Adult_Age_2020_State <- Pop_Age_2020_State %>%
   mutate(Total=rowSums(across(starts_with("Age"))))
 
 Adult_AgeCat_2020_State <- Pop_AgeCat_2020_State %>%
-  dplyr::select(-c("Under 18")) %>%
+  dplyr::select(-c("0-17")) %>%
   mutate(Total=`18-39`+`40-64`+`65+`)
 
 Pop_SA_2020_CD <- get_decennial(geography="congressional district", 
@@ -225,7 +231,7 @@ Pop_Age_2020_CD <- Pop_SA_2020_CD %>%
               names_from="AgeCat", values_from="Pop")
 
 Pop_AgeCat_2020_CD <- Pop_SA_2020_CD %>%
-  mutate(AgeCat=if_else(Max < 18, "Under 18",
+  mutate(AgeCat=if_else(Max < 18, "0-17",
                         if_else(Max < 40, "18-39",
                                 if_else(Max < 65, "40-64", "65+")))) %>%
   group_by(GEOID,NAME,Total,State,CD,AgeCat) %>%
@@ -239,7 +245,7 @@ Adult_Age_2020_CD <- Pop_Age_2020_CD %>%
   mutate(Total=rowSums(across(starts_with("Age"))))
 
 Adult_AgeCat_2020_CD <- Pop_AgeCat_2020_CD %>%
-  dplyr::select(-c("Under 18")) %>%
+  dplyr::select(-c("0-17")) %>%
   mutate(Total=`18-39`+`40-64`+`65+`)
 
 Pop_Sex_2020 <- list(State=Pop_Sex_2020_State,
@@ -293,24 +299,26 @@ save(Adult_AgeCat_2020,
 
 ## Renter/Owner 2020:
 RO_cols <- c(Total="H4_001N",
-             Mortgage="H4_002N",
-             Owned="H4_003N",
+             `Owner: Mortgage`="H4_002N",
+             `Owner: Clear`="H4_003N",
              Renter="H4_004N")
 HH_RO_2020_State <- get_decennial(geography="state", 
                              variables=RO_cols,
                              year=2020, sumfile="dhc",
-                             output="wide")
+                             output="wide") %>%
+  mutate(Owner=`Owner: Mortgage`+`Owner: Clear`)
 HH_RO_2020_CD <- get_decennial(geography="congressional district", 
                             variables=RO_cols,
                             year=2020, sumfile="dhc",
                             output="wide") %>% 
-  mutate(State=str_split_i(NAME, ", ", 2),
+  mutate(Owner=`Owner: Mortgage`+`Owner: Clear`,
+         State=str_split_i(NAME, ", ", 2),
          CD=substr(GEOID, 3, 4)) %>%
   dplyr::filter(CD != "ZZ")
 HH_RO_2020 <- list(State=HH_RO_2020_State,
                    CD=HH_RO_2020_CD,
                     year=2020,
-                    VarNames=names(RO_cols),
+                    VarNames=c(names(RO_cols),"Owner"),
                     type="get_decennial",
                     sumfile="dhc",
                     variables=RO_cols)
@@ -322,11 +330,11 @@ save(HH_RO_2020,
 ## Owner vs. Renter:
 
 RO_2010 <- c(Total="H004001",
-             Mortgage="H004002",
-             Owned="H004003",
+             `Owner: Mortgage`="H004002",
+             `Owner: Clear`="H004003",
              Renter="H004004")
 RO_2000 <- c(Total="H004001",
-             Owned="H004002",
+             Owner="H004002",
              Renter="H004003")
 # Note: 2000 doesn't have mortgage vs. owned free & clear distinction
 
@@ -334,12 +342,13 @@ HH_RO_2010_CD <- get_decennial(geography="congressional district",
                                 variables=RO_2010,
                                 year=2010, sumfile="sf1",
                                 output="wide") %>% 
-  mutate(State=str_split_i(NAME, ", ", 2),
+  mutate(Owner=`Owner: Mortgage` + `Owner: Clear`,
+         State=str_split_i(NAME, ", ", 2),
          CD=substr(GEOID, 3, 4)) %>%
   dplyr::filter(CD != "ZZ")
 HH_RO_2010 <- list(CD=HH_RO_2010_CD,
                    year=2010,
-                   VarNames=names(RO_2010),
+                   VarNames=c(names(RO_2010),"Owner"),
                    type="get_decennial",
                    sumfile="sf1",
                    variables=RO_2010)
@@ -363,8 +372,8 @@ save(HH_RO_2000,
 UR_2010 <- c(Total="P002001",
              Urban="P002002",
              Rural="P002005",
-             UrbanizedAreas="P002003",
-             UrbanClusters="P002004")
+             `Urbanized Area`="P002003",
+             `Urban Cluster`="P002004")
 
 Pop_UR_2010_CD <- get_decennial(geography="congressional district", 
                                variables=UR_2010,
@@ -397,24 +406,24 @@ save(Pop_UR_2000,
 
 ## Race and Ethnicity:
 RE_2010 <- c(Total="P005001",
-             Hisp="P005010",
+             Hispanic="P005010",
              White="P005003",
              Black="P005004",
              AIAN="P005005",
              Asian="P005006",
              NHOPI="P005007",
              Other="P005008",
-             Multi="P005009")
+             Multiple="P005009")
 
 RE_2000 <- c(Total="P004001",
-             Hisp="P004002",
+             Hispanic="P004002",
              White="P004005",
              Black="P004006",
              AIAN="P004007",
              Asian="P004008",
              NHOPI="P004009",
              Other="P004010",
-             Multi="P004011")
+             Multiple="P004011")
 
 Pop_RE_2010_CD <- get_decennial(geography="congressional district", 
                                 variables=RE_2010,
@@ -470,7 +479,7 @@ Pop_Sex_2000_State <- get_decennial(geography="state",
                                  year=2000, sumfile="sf1",
                                  output="wide")
 Pop_Sex_2000 <- list(State=Pop_Sex_2000_State,
-                     year=2010,
+                     year=2000,
                      VarNames=names(Sex_2010),
                      type="get_decennial",
                      sumfile="sf1",
@@ -552,7 +561,7 @@ Pop_Age_2010_CD <- Pop_SA_2010_CD %>%
   pivot_wider(id_cols=c("GEOID","NAME","Total","State","CD"),
               names_from="AgeCat", values_from="Pop")
 Pop_AgeCat_2010_CD <- Pop_SA_2010_CD %>%
-  mutate(AgeCat=if_else(Max < 18, "Under 18",
+  mutate(AgeCat=if_else(Max < 18, "0-17",
                         if_else(Max < 40, "18-39",
                                 if_else(Max < 65, "40-64", "65+")))) %>%
   group_by(GEOID,NAME,Total,State,CD,AgeCat) %>%
@@ -600,7 +609,7 @@ Pop_Age_2000_State <- Pop_SA_2000_State %>%
   pivot_wider(id_cols=c("GEOID","NAME","Total"),
               names_from="AgeCat", values_from="Pop")
 Pop_AgeCat_2000_State <- Pop_SA_2000_State %>%
-  mutate(AgeCat=if_else(Max < 18, "Under 18",
+  mutate(AgeCat=if_else(Max < 18, "0-17",
                         if_else(Max < 40, "18-39",
                                 if_else(Max < 65, "40-64", "65+")))) %>%
   group_by(GEOID,NAME,Total,AgeCat) %>%
