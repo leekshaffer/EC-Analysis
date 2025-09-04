@@ -2,11 +2,8 @@ library(tidyverse)
 library(patchwork)
 
 source("R/00-key_values.R")
-Numerators <- c("EC", "Senate", "House")
-Denominators <- c("Population", "Pop: Without DC", "Pop: With PR")
 
 # Trend Plots
-CensusYrs <- c(2000, 2010, 2020)
 Scale_House <- c(0.970, 1.025)
 Scale_Senate <- c(0.55, 2.20)
 Scale_EC <- c(0.9, 1.2)
@@ -14,6 +11,8 @@ Scale_EC <- c(0.9, 1.2)
 Trend_Viz <- function(Name, Years=CensusYrs, Type="Census",
                       denom="Population", 
                       Log=TRUE, Facets="none", scales="fixed") {
+  ## Use Facets="none" to get all Numerators on one graph
+  ## Use Facets="h" for horizontal faceting and "v" for vertical faceting
   
   Dat <- NULL
 
@@ -23,37 +22,7 @@ Trend_Viz <- function(Name, Years=CensusYrs, Type="Census",
                      get(paste(Name, Year, "Res", sep="_"))[[denom]] %>%
                        dplyr::mutate(Year=Year))
   }
-    
-  if (Facets=="vertical") {
-    plot <- ggplot(Dat, mapping=aes(x=Year, y=`Abs. Weight`, 
-                                    group=interaction(Category,Analysis), 
-                                    linetype=Category, 
-                                    color=Category)) +
-      geom_point() +
-      geom_line() +
-      theme_bw() + 
-      facet_wrap(facets=~Analysis, ncol=1,
-                 scales=scales) +
-      theme(legend.position="bottom",
-            legend.title=element_blank()) 
-    if (length(unique(Dat$Category)) > 3) {
-      plot <- plot +
-      guides(linetype=guide_legend(nrow=2, byrow=TRUE),
-             color=guide_legend(nrow=2, byrow=TRUE))
-    }
-  } else if (Facets=="horizontal") {
-    plot <- ggplot(Dat, mapping=aes(x=Year, y=`Abs. Weight`, 
-                                    group=interaction(Category,Analysis), 
-                                    linetype=Category, 
-                                    color=Category)) +
-      geom_point() +
-      geom_line() +
-      theme_bw() + 
-      facet_wrap(facets=~Numerator, nrow=1,
-                 scales=scales) +
-      theme(legend.position="bottom",
-            legend.title=element_blank())
-  } else {
+  if (Facets=="none") {
     plot <- ggplot(Dat, mapping=aes(x=Year, y=`Abs. Weight`, 
                                     group=interaction(Category,Analysis), 
                                     shape=Analysis, linetype=Analysis, 
@@ -61,11 +30,31 @@ Trend_Viz <- function(Name, Years=CensusYrs, Type="Census",
       geom_point() +
       geom_line() +
       theme_bw()
+  } else if (Facets %in% c("h","v")) {
+    plot <- ggplot(Dat, mapping=aes(x=Year, y=`Abs. Weight`, 
+                                    group=interaction(Category,Analysis), 
+                                    linetype=Category, 
+                                    color=Category)) +
+      geom_point() +
+      geom_line() +
+      theme_bw() + 
+      facet_wrap(facets=~factor(Analysis, levels=rev(levels(Analysis))), 
+                 dir=Facets,
+                 scales=scales) +
+      theme(legend.position="bottom",
+            legend.title=element_blank())
+    if (Facets=="v" & length(unique(Dat$Category)) > 3) {
+      plot <- plot +
+        guides(linetype=guide_legend(nrow=2, byrow=TRUE),
+               color=guide_legend(nrow=2, byrow=TRUE))
+    }
   }
   if (Log) {
-    plot <- plot + scale_y_log10(name="Weight")
+    plot <- plot + scale_y_log10(name="Weight") +
+      scale_x_continuous(breaks=CensusYrs, minor_breaks=NULL)
   } else {
-    plot <- plot + scale_y_continuous(name="Weight")
+    plot <- plot + scale_y_continuous(name="Weight") +
+      scale_x_continuous(breaks=CensusYrs, minor_breaks=NULL)
   }
   return(list(Dat=Dat,
               plot=plot))
@@ -74,7 +63,12 @@ Trend_Viz <- function(Name, Years=CensusYrs, Type="Census",
 for (Name in Names) {
   p_fac <- Trend_Viz(Name, Years=CensusYrs, Type="Census",
                     denom="Population",
-                    Log=TRUE, Facets="vertical", scales="free")
+                    Log=TRUE, Facets="v", scales="free")
+  
+  assign(x=paste(Name, "Trend", sep="_"),
+         value=p_fac$Dat)
+  save(list=paste(Name, "Trend", sep="_"), 
+       file = paste0("res/Census_Trend/", Name, "_Trend.Rda"))
   
   ggsave(filename=paste0("figs/Census/Trend_",Name,".png"),
          plot=p_fac$plot,
@@ -142,13 +136,20 @@ ggsave(filename="figs/Census/Trend_Plot_Three.png",
 # Proportion Plots
 Plot_Props <- function(Name, Year=2020, Type="Census",
                        denom="Population",
-                       Cols=NULL) {
+                       Cols_Spec=NULL) {
   load(paste0("res/",Type,"/",Name,"_",Year,".Rda"))
   Dat <- get(paste(Name, Year, "Res", sep="_"))[[denom]]
   
+  # if (paste(Name, "Prop", Year, sep="_") %in% names(ColOrders)) {
+  #   ColNames <- ColOrders[[paste(Name, "Prop", Year, sep="_")]]
+  # } else {
+  #   ColNames <- ColOrders[[Name]]
+  # }
   ColNames <- ColOrders[[Name]]
-  if (is.null(Cols)) {
+  if (is.null(Cols_Spec)) {
     Cols <- ColNames[ColNames %in% unique(Dat$Category)]
+  } else {
+    Cols <- ColNames[Cols_Spec]
   }
   
   Pop <- Dat %>% dplyr::filter(Analysis==Numerators[1]) %>%
@@ -195,6 +196,10 @@ Plot_Props <- function(Name, Year=2020, Type="Census",
       guides(fill=guide_legend(nrow=2, byrow=TRUE))
                                # reverse=TRUE))
   }
+  if (!is.null(Cols_Spec)) {
+    plot <- plot +
+      scale_fill_manual(values=hue_pal()(length(ColNames))[Cols_Spec])
+  }
   
   ggsave(filename=paste0("figs/",Type,"/Props_",Name,".png"),
          plot=plot,
@@ -202,6 +207,14 @@ Plot_Props <- function(Name, Year=2020, Type="Census",
 }
 
 for (Name in Names) {
-  Plot_Props(Name, Year=2020, Type="Census",
-             denom="Population", Cols=NULL)
+  if (Name=="Pop_UR") {
+    Plot_Props(Name, Year=2020, Type="Census",
+               denom="Population", Cols=1:2)
+  } else if (Name=="HH_RO") {
+    Plot_Props(Name, Year=2020, Type="Census",
+               denom="Population", Cols=1:3)
+  } else {
+    Plot_Props(Name, Year=2020, Type="Census",
+               denom="Population", Cols=NULL)
+  }
 }

@@ -2,11 +2,6 @@ library(tidyverse)
 load("int/Apportion.Rda")
 source("R/00-key_values.R")
 
-## Note: if you change these orders, you will need to change the orders 
-### in the Totals and Proportions creating as well
-Numerators <- c("EC", "Senate", "House")
-Denominators <- c("Population", "Pop: Without DC", "Pop: With PR")
-
 Analyze_List <- function(Name, Year=2020, Use_CD=TRUE,
                          Type="Census") {
   load(file=paste0("int/",Type,"/",Name,"_",Year,".Rda"))
