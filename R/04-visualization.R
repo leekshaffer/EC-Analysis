@@ -11,43 +11,28 @@ Scale_House <- c(0.970, 1.025)
 Scale_Senate <- c(0.55, 2.20)
 Scale_EC <- c(0.9, 1.2)
 
-Dat_Trend <- function(Name, Years=CensusYrs, Type="Census") {
-  for (denom in Denominators) {
-    assign(x=paste("Tbl", denom, sep="_"),
-           value=NULL)
-  }
+Trend_Viz <- function(Name, Years=CensusYrs, Type="Census",
+                      denom="Population", 
+                      Log=TRUE, Facets="none", scales="fixed") {
+  
+  Dat <- NULL
+
   for (Year in Years) {
     load(paste0("res/",Type,"/",Name,"_",Year,".Rda"))
-    for (denom in Denominators) {
-      assign(x=paste("Tbl", denom, sep="_"),
-             value=bind_rows(get(paste("Tbl", denom, sep="_")),
-                             get(paste(Name, Year, "Res", sep="_"))[[denom]] %>% 
-                               dplyr::mutate(Year=Year)))
-    }
+    Dat <- bind_rows(Dat,
+                     get(paste(Name, Year, "Res", sep="_"))[[denom]] %>%
+                       dplyr::mutate(Year=Year))
   }
-  
-  Dat_List <- list()
-  for (denom in Denominators) {
-    Dat_List[[denom]] <- get(paste("Tbl", denom, sep="_"))
-  }
-  return(Dat_List)
-}
-
-Viz_Trend <- function(Dat_List, denom="Population", 
-                         Log=TRUE, 
-                         Facets="none", scales="fixed") {
-  Dat <- Dat_List[[denom]]
-  
-  ## Paused as of 9/4 11:38
+    
   if (Facets=="vertical") {
-    plot <- ggplot(Dat, mapping=aes(x=Year, y=Weight, 
-                                    group=interaction(Category,Numerator), 
+    plot <- ggplot(Dat, mapping=aes(x=Year, y=`Abs. Weight`, 
+                                    group=interaction(Category,Analysis), 
                                     linetype=Category, 
                                     color=Category)) +
       geom_point() +
       geom_line() +
       theme_bw() + 
-      facet_wrap(facets=~Numerator, ncol=1,
+      facet_wrap(facets=~Analysis, ncol=1,
                  scales=scales) +
       theme(legend.position="bottom",
             legend.title=element_blank()) 
@@ -57,8 +42,8 @@ Viz_Trend <- function(Dat_List, denom="Population",
              color=guide_legend(nrow=2, byrow=TRUE))
     }
   } else if (Facets=="horizontal") {
-    plot <- ggplot(Dat, mapping=aes(x=Year, y=Weight, 
-                                    group=interaction(Category,Numerator), 
+    plot <- ggplot(Dat, mapping=aes(x=Year, y=`Abs. Weight`, 
+                                    group=interaction(Category,Analysis), 
                                     linetype=Category, 
                                     color=Category)) +
       geom_point() +
@@ -69,40 +54,38 @@ Viz_Trend <- function(Dat_List, denom="Population",
       theme(legend.position="bottom",
             legend.title=element_blank())
   } else {
-    plot <- ggplot(Dat, mapping=aes(x=Year, y=Weight, 
-                                    group=interaction(Category,Numerator), 
-                                    shape=Numerator, linetype=Numerator, 
+    plot <- ggplot(Dat, mapping=aes(x=Year, y=`Abs. Weight`, 
+                                    group=interaction(Category,Analysis), 
+                                    shape=Analysis, linetype=Analysis, 
                                     color=Category)) +
       geom_point() +
       geom_line() +
       theme_bw()
   }
   if (Log) {
-    plot <- plot + scale_y_log10()
+    plot <- plot + scale_y_log10(name="Weight")
+  } else {
+    plot <- plot + scale_y_continuous(name="Weight")
   }
-  return(plot)
+  return(list(Dat=Dat,
+              plot=plot))
 }
 
-for (name in Names) {
-  colorders <- ColOrders[[name]]
-  if (paste(name, "Addl", sep="_") %in% names(ColOrders)) {
-    colorders <- c(colorders, ColOrders[[paste(name, "Addl", sep="_")]])
-  }
-  Trend_Dat <- Dat_Trend(Name=name,
-                         Years=CensusYrs,
-                         ColNames=colorders)
-  x <- Viz_Trend(Trend_Dat,
-                 Log=TRUE, Facets="vertical",
-                 scales="free")
-  ggsave(filename=paste0("figs/Trend_",name,".png"),
-         plot=x,
+for (Name in Names) {
+  p_fac <- Trend_Viz(Name, Years=CensusYrs, Type="Census",
+                    denom="Population",
+                    Log=TRUE, Facets="vertical", scales="free")
+  
+  ggsave(filename=paste0("figs/Trend_",Name,".png"),
+         plot=p_fac$plot,
          device=png,
          width=4, height=6, units="in", dpi=300)
-  # save(x, file=paste0("int/TrendPlot_",name,".Rda"))
   
-  for (num in Numerators) {
-    p1 <- ggplot(Trend_Dat %>% dplyr::filter(Numerator==num),
-                 mapping=aes(x=Year, y=Weight,
+  Trend_Dat <- p_fac$Dat
+  
+  for (num in rev(Numerators)) {
+    p1 <- ggplot(Trend_Dat %>% dplyr::filter(Analysis==num),
+                 mapping=aes(x=Year, y=`Abs. Weight`,
                              group=Category,
                              linetype=Category,
                              color=Category)) +
@@ -114,9 +97,9 @@ for (name in Names) {
       theme(legend.position="bottom",
             legend.title=element_blank()) +
       labs(subtitle=num)
-    if (num=="House") {
-      p1 <- p1 + labs(title=Titles[name])
-    }
+    # if (num==rev(Numerators)[1]) {
+    #   p1 <- p1 + labs(title=Titles[Name])
+    # }
     if (length(unique(Trend_Dat$Category)) > 3) {
       if (length(unique(Trend_Dat$Category)) > 6) {
         p1 <- p1 +
@@ -128,32 +111,35 @@ for (name in Names) {
                  color=guide_legend(nrow=2, byrow=TRUE))
       }
     }
-    assign(x=paste(name, num, sep="_"),
+    assign(x=paste(Name, num, sep="_"),
            value=p1)
   }
-  p_col <- (get(paste(name, "House", sep="_")) / 
-    get(paste(name, "Senate", sep="_"))/ 
-    get(paste(name, "EC", sep="_"))) + 
+  
+  p_col <- ((get(paste(Name, "House", sep="_")) + labs(title=Titles[Name])) / 
+    get(paste(Name, "Senate", sep="_"))/ 
+    get(paste(Name, "EC", sep="_"))) + 
     plot_layout(guides="collect") & theme(legend.position="bottom")
-  assign(x=paste(name, "Plot", "Col", sep="_"),
+  assign(x=paste(Name, "Plot", "Col", sep="_"),
          value = p_col)
 }
 
 p_big <- NULL
-for (name in Names) {
-  p_big <- p_big | get(paste(name, "Plot", "Col", sep="_"))
+for (Name in Names) {
+  p_big <- p_big | get(paste(Name, "Plot", "Col", sep="_"))
 }
 ggsave(filename="figs/Trend_Plot_Full.png",
        plot=p_big,
-       width=9, height=6.5, units="in", dpi=300, device=png)
+       width=12, height=7, units="in", dpi=300, device=png)
 
 p_med <- NULL
-for (name in Names[c(1,4,5)]) {
-  p_med <- p_med | get(paste(name, "Plot", "Col", sep="_"))
+for (Name in Names[c(1,4,5)]) {
+  p_med <- p_med | get(paste(Name, "Plot", "Col", sep="_"))
 }
 ggsave(filename="figs/Trend_Plot_Three.png",
        plot=p_med,
        width=8.8, height=5.8, units="in", dpi=300, device=png)
+
+## Updated as of 9/4, 12:11
 
 # Proportion Plots
 Plot_Props <- function(Name, Year=2020, ColNames=NULL,
