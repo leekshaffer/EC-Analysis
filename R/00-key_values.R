@@ -5,12 +5,11 @@ Names <- c("Pop_RE", "Pop_AgeCat", "Pop_Sex",
 Titles <- c("Race/Ethnicity", "Age Category", "Sex", 
             "Urban/Rural", "Housing Status")
 names(Titles) <- Names
-Names_Titled <- Names
-names(Names_Titled) <- Titles
-Referents <- c("White", "0-17", "Female", "Urban", "Renter")
-names(Referents) <- Names
 
-ColOrders <- list(Pop_RE=c("White", "Hispanic", "Black", "Asian", "Multiple", "AIAN", "NHOPI", "Other"),
+## The order in which categories will appear for each Name;
+### the first category will be used as the referent for relative weights
+ColOrders <- list(Pop_RE=c("White", "Hispanic", "Black", "Asian", 
+                           "Multiple", "AIAN", "NHOPI", "Other"),
                   Pop_AgeCat=c("0-17", "18-39", "40-64", "65+"),
                   Pop_Sex=c("Female", "Male"),
                   Pop_UR=c("Rural", "Urban", "Urban Cluster", "Urbanized Area"),
@@ -23,14 +22,20 @@ ColOrders <- list(Pop_RE=c("White", "Hispanic", "Black", "Asian", "Multiple", "A
                   # Pop_UR_Prop_2020=c("Rural", "Urban"))
 
 CensusYrs <- c(2000, 2010, 2020)
+Census_UseCD <- c(FALSE, TRUE, TRUE)
+names(Census_UseCD) <- CensusYrs
 
 ## Note: if you change these orders, you will need to change the orders 
-### in the Totals and Proportions creating as well
+### in the import files so that the creation of Totals and Proportions matches.
 Numerators <- c("EC", "Senate", "House")
 Denominators <- c("Population", "Pop: Without DC", "Pop: With PR")
 
+## Special named vectors for Shiny input
 Denom_Titled <- Denominators
 names(Denom_Titled) <- c("With DC, Not PR", "Without DC and PR", "With DC and PR")
 
 Num_Titled <- rev(Numerators)
 names(Num_Titled) <- c("House", "Senate", "Electoral College")
+
+Names_Titled <- Names
+names(Names_Titled) <- Titles

@@ -9,6 +9,17 @@ Scale_House <- c(0.970, 1.025)
 Scale_Senate <- c(0.55, 2.20)
 Scale_EC <- c(0.9, 1.2)
 
+Trend_Viz_Facet <- function(Name, Type="Census",
+                            Log=TRUE, scales="fixed") {
+  load(paste0("res/", Type, "_Full/", Name, "_Res.Rda"))
+  Full <- get(paste(Name, "Res", sep="_"))
+  
+  for (Denom in Denominators) {
+    Dat <- Full %>% dplyr::filter(Denominator==Denom)
+    
+  }
+}
+
 Trend_Viz <- function(Name, Years=CensusYrs, Type="Census",
                       denom="Population", 
                       Log=TRUE, Facets="none", scales="fixed") {

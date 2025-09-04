@@ -2,18 +2,16 @@ library(tidyverse)
 load("int/Apportion.Rda")
 source("R/00-key_values.R")
 
-Analyze_List <- function(Name, Year=2020, Use_CD=TRUE,
-                         Type="Census") {
+Analyze_List_Yr <- function(Name, Year=2020, Type="Census") {
   load(file=paste0("int/",Type,"/",Name,"_",Year,".Rda"))
   Obj <- get(paste(Name, Year, sep="_"))
   
   ColNames <- ColOrders[[Name]]
   ColNames_Use <- ColNames[ColNames %in% Obj$VarNames]
-  Referent <- ColNames_Use[1]
   Group_Cols <- c("Total", ColNames_Use)
   Group_Cols_Prop <- paste0(Group_Cols, "_Prop")
   
-  if (Use_CD) {
+  if (get(paste(Type, "UseCD", sep="_"))[as.character(Year)]) {
     CD <- Obj$CD %>%
       mutate(Year=Obj$year) %>%
       left_join(Abb %>% rename(Postal=State, State=NAME), by="State") %>%
@@ -142,47 +140,44 @@ Analyze_List <- function(Name, Year=2020, Use_CD=TRUE,
   PL_Nums <- Prop_Long %>%
     dplyr::filter(Analysis %in% Numerators,
                   Category != "Total")
+  PL_Denoms <- Prop_Long %>%
+    dplyr::filter(Analysis %in% Denominators,
+                  Category != "Total") %>%
+    left_join(Totals %>% dplyr::select(Analysis,Total),
+              by=join_by(Analysis)) %>%
+    dplyr::rename(Denominator=Analysis,
+                  `Population Proportion`=Proportion)
   
-  Tbl_List <- list(Cols=ColNames_Use,
-                   Referent=Referent)
-  for (denom in Denominators) {
-    Total_Pop <- Totals %>% dplyr::filter(Analysis==denom) %>%
-      pull(Total)
-    
-    tbl <- Prop_Long %>% dplyr::filter(Analysis==denom,
-                                       Category != "Total") %>%
-      dplyr::rename(`Population Proportion`=Proportion) %>%
-      dplyr::select(-c("Analysis")) %>%
-      right_join(PL_Nums, by=join_by(Category)) %>%
-      dplyr::mutate(`Abs. Weight`=Proportion/`Population Proportion`)
-    
-    Refs <- tbl %>%
-      left_join(tbl %>% dplyr::filter(Category==Referent) %>% 
-                  dplyr::rename(RefW=`Abs. Weight`) %>%
-                  dplyr::select(Analysis, RefW),
-                by=join_by(Analysis)) %>%
-      dplyr::mutate(`Rel. Weight`=`Abs. Weight`/RefW) %>%
-      dplyr::select(Category, Analysis, `Rel. Weight`)
-    
-    tbl <- tbl %>% 
-      left_join(Refs, by=join_by(Category, Analysis)) %>%
-      dplyr::mutate(`Excess Pop.`=Total_Pop*(Proportion-`Population Proportion`),
-                    Analysis=factor(Analysis, levels=Numerators),
-                    Category=factor(Category, levels=ColNames_Use)) %>%
-      dplyr::arrange(desc(Analysis), Category) %>%
-      dplyr::select(Analysis, Category, everything())
-    
-    Tbl_List[[denom]] <- tbl
-  }
+  Tbl <- full_join(PL_Nums, PL_Denoms, 
+                   by=join_by(Category), 
+                   relationship="many-to-many",
+                   multiple="all") %>%
+    dplyr::mutate(`Abs. Weight`=Proportion/`Population Proportion`,
+                  Year=Year) %>%
+    dplyr::select(Year, Denominator, Analysis, Category,
+                  Total, `Population Proportion`, Proportion, 
+                  `Abs. Weight`)
   
-  assign(x=paste(Name, Year, "Res", sep="_"),
-         value=Tbl_List)
-  save(list=paste(Name, Year, "Res", sep="_"),
-       file=paste0("res/",Type,"/",Name,"_",Year,".Rda"))
+  RefTbl <- Tbl %>% dplyr::filter(Category==ColNames_Use[1]) %>%
+    dplyr::rename(RefW=`Abs. Weight`) %>%
+    dplyr::select(Denominator, Analysis, RefW)
+  
+  Tbl2 <- Tbl %>% left_join(RefTbl, by=join_by(Denominator, Analysis)) %>%
+    dplyr::mutate(`Rel. Weight`=`Abs. Weight`/RefW,
+                  `Excess Pop.`=Total*(Proportion-`Population Proportion`),
+                  Denominator=factor(Denominator, levels=Denominators),
+                  Analysis=factor(Analysis, levels=Numerators),
+                  Category=factor(Category, levels=ColNames_Use)) %>%
+    dplyr::arrange(Year, Denominator, desc(Analysis), Category) %>%
+    dplyr::select(-c("Total","RefW"))
+  
+  return(Tbl2)
 }
 
 for (Name in Names) {
-  Analyze_List(Name, Year=2020, Use_CD=TRUE, Type="Census")
-  Analyze_List(Name, Year=2010, Use_CD=TRUE, Type="Census")
-  Analyze_List(Name, Year=2000, Use_CD=FALSE, Type="Census")
+  assign(x=paste(Name, "Res", sep="_"),
+         value=bind_rows(lapply(CensusYrs, 
+                   function(x) Analyze_List_Yr(Name, Year=x, Type="Census"))))
+  save(list=paste(Name, "Res", sep="_"),
+       file=paste0("res/Census_Full/", Name, "_Res.Rda"))
 }
