@@ -1,23 +1,9 @@
 library(tidyverse)
 library(patchwork)
 
-# Basic Info
-
-Names <- c("Pop_RE", "Pop_AgeCat", "Pop_Sex", 
-           "Pop_UR", "HH_RO")
-Titles <- c("Race/Ethnicity", "Age Category", "Sex", 
-            "Urban/Rural", "Housing Status")
-names(Titles) <- Names
-
-Numerators <- c("House", "Senate", "EC")
-
-ColOrders <- list(Pop_RE=c("White", "Hispanic", "Black", "Asian", "Multiple", "AIAN", "NHOPI", "Other"),
-                  Pop_AgeCat=c("0-17", "18-39", "40-64", "65+"),
-                  Pop_Sex=c("Female", "Male"),
-                  Pop_UR=c("Urban", "Rural"),
-                  HH_RO=c("Renter", "Owner: Mortgage", "Owner: Clear"),
-                  Pop_UR_Trend_Addl=c("Urbanized Area", "Urban Cluster"),
-                  HH_RO_Trend_Addl=c("Owner"))
+source("R/00-key_values.R")
+Numerators <- c("EC", "Senate", "House")
+Denominators <- c("Population", "Pop: Without DC", "Pop: With PR")
 
 # Trend Plots
 CensusYrs <- c(2000, 2010, 2020)
@@ -95,10 +81,8 @@ Viz_Trend <- function(Dat,
 
 for (name in Names) {
   colorders <- ColOrders[[name]]
-  if (paste(name, "Trend", sep="_") %in% names(ColOrders)) {
-    colorders <- ColOrders[[paste(name, "Trend", sep="_")]]
-  } else if (paste(name, "Trend", "Addl", sep="_") %in% names(ColOrders)) {
-    colorders <- c(colorders, ColOrders[[paste(name, "Trend", "Addl", sep="_")]])
+  if (paste(name, "Addl", sep="_") %in% names(ColOrders)) {
+    colorders <- c(colorders, ColOrders[[paste(name, "Addl", sep="_")]])
   }
   Trend_Dat <- Dat_Trend(Name=name,
                          Years=CensusYrs,
@@ -168,9 +152,9 @@ ggsave(filename="figs/Trend_Plot_Three.png",
        width=8.8, height=5.8, units="in", dpi=300, device=png)
 
 # Proportion Plots
-Props_Use <- c("EC", "Senate", "House", "Population")
-
-Plot_Props <- function(Name, Year=2020, ColNames=NULL) {
+Plot_Props <- function(Name, Year=2020, ColNames=NULL,
+                       Props_Use=Numerators,
+                       Denom="Population") {
   load(paste0("res/",Name,"_",Year,".Rda"))
   Props <- get(paste(Name, Year, "Res", sep="_"))$Proportions
   if (is.null(ColNames)) {
@@ -180,38 +164,53 @@ Plot_Props <- function(Name, Year=2020, ColNames=NULL) {
   }
   Props <- Props %>%
     dplyr::select(c("Analysis",all_of(Cols))) %>%
-    dplyr::filter(Analysis %in% Props_Use) %>%
-    dplyr::mutate(Analysis=factor(Analysis,
-                                  levels=Props_Use, labels=Props_Use)) %>%
+    dplyr::filter(Analysis %in% c(Props_Use,Denom)) %>%
     pivot_longer(cols=Cols, 
                  names_to=c("Category","Hold"), names_sep="_",
                  values_to="Proportion") 
+  Wts <- get(paste(Name, Year, "Res", sep="_"))$Weights %>%
+    dplyr::filter(Numerator %in% Props_Use, 
+                  Denominator==Denom) %>%
+    pivot_longer(cols=all_of(ColNames),
+                 names_to="Category",
+                 values_to="Weight") %>%
+    dplyr::rename(Analysis=Numerator) %>%
+    dplyr::select(Analysis,Category,Weight)
+  Props_Viz <- Props %>% left_join(Wts, by=join_by(Analysis,Category)) %>%
+    dplyr::mutate(Analysis=factor(Analysis,
+                                  levels=c(Props_Use,Denom), 
+                                  labels=c(Props_Use,Denom)))
   if (is.null(ColNames)) {
-    Props <- Props %>%
+    Props_Viz <- Props_Viz %>%
       dplyr::arrange(Analysis, desc(Category))
   } else {
-    Props <- Props %>%
+    Props_Viz <- Props_Viz %>%
       dplyr::mutate(Category=factor(Category, levels=ColNames, labels=ColNames)) %>%
       dplyr::arrange(Analysis, Category)
   }
-  Props <- Props %>%
-    bind_cols(Props %>% group_by(Analysis) %>%
+  Props_Viz <- Props_Viz %>%
+    bind_cols(Props_Viz %>% group_by(Analysis) %>%
                 dplyr::reframe(CS=cumsum(Proportion)-Proportion) %>%
                 dplyr::select(CS)) %>%
     dplyr::mutate(Position=CS+Proportion/2,
                   Percentage=paste0(format(round(Proportion*100, digits=2),
                                            digits=2, nsmall=2), "%"),
-                  PercLab=if_else(Proportion < 0.05,
-                                  NA_character_, Percentage))
-  plot <- ggplot(Props) +
+                  Label=if_else(is.na(Weight), Percentage,
+                                paste(Percentage, paste("Wt:", format(round(Weight, digits=2), 
+                                                                   digits=2, nsmall=2),
+                                                     sep=" "),
+                                      sep="\n")),
+                  Label_Use=if_else(Proportion < 0.05,
+                                    "", Label))
+  plot <- ggplot(Props_Viz) +
     geom_col(mapping=aes(y=Analysis, fill=Category,
                          x=Proportion),
              position = position_stack(reverse=TRUE)) +
     geom_text(mapping=aes(x=Position,
                           y=Analysis,
-                          label=PercLab),
+                          label=Label_Use),
                hjust="center",
-              size=2.1) +
+              size=2) +
     theme_bw() +
     labs(y="", fill="",
          title=paste0("Population Proportions by ",Titles[Name])) +
@@ -234,38 +233,69 @@ for (name in Names) {
 
 # Tables of Weights and Excess Pops:
 
-Table <- function(Name, Year=2020, ColNames=NULL) {
+Table <- function(Name, Year=2020, ColNames=NULL,
+                  Props_Use=Numerators,
+                  Denom="Population") {
   load(paste0("res/",Name,"_",Year,".Rda"))
   LX <- get(paste(Name, Year, "Res", sep="_"))
   Cols <- colnames(LX$Relative)
-  Cols <- Cols[!(Cols %in% c("Numerator","Denominator"))]
-  tbl <- LX$Proportions %>% dplyr::filter(Analysis=="Population") %>%
-    dplyr::select(-c("Total_Prop")) %>%
+  if (is.null(ColNames)) {
+    Cols <- Cols[!(Cols %in% c("Numerator","Denominator"))]
+  } else {
+    Cols <- ColNames[ColNames %in% Cols]
+  }
+  tbl <- LX$Proportions %>% 
+    dplyr::filter(Analysis %in% c(Denom,Props_Use)) %>%
     pivot_longer(cols=paste(Cols, "Prop", sep="_"),
                  names_to=c("Category", "Hold"), names_sep="_",
                  values_to="Population Proportion") %>%
-    dplyr::select(-c("Analysis","Hold"))
+    dplyr::select(-c("Total_Prop","Hold"))
   
-  AbsW <- LX$Weights %>% dplyr::filter(Numerator %in% Numerators,
-                                       Denominator=="Population") %>%
+  AbsW <- LX$Weights %>% dplyr::filter(Numerator %in% Props_Use,
+                                       Denominator==Denom) %>%
+    dplyr::select(all_of(c("Numerator",Cols))) %>%
+    pivot_longer(cols=Cols, names_to="Category", values_to="Abs. Weights")
+  
+  RelW <- LX$Relative %>% dplyr::filter(Numerator %in% Props_Use,
+                                       Denominator==Denom) %>%
     dplyr::select(c("Numerator",all_of(Cols))) %>%
-    pivot_longer(cols=Cols, names_to="Category", values_to="W") %>%
-    pivot_wider(id_cols=Category, names_from=Numerator, values_from="W",
-                names_prefix="Abs. Weights: ")
+    pivot_longer(cols=Cols, names_to="Category", values_to="Rel. Weights")
   
-  RelW <- LX$Relative %>% dplyr::filter(Numerator %in% Numerators,
-                                       Denominator=="Population") %>%
+  Exc <- LX$Excess %>% dplyr::filter(Numerator %in% Props_Use,
+                                     Denominator==Denom) %>%
     dplyr::select(c("Numerator",all_of(Cols))) %>%
-    pivot_longer(cols=Cols, names_to="Category", values_to="W") %>%
-    pivot_wider(id_cols=Category, names_from=Numerator, values_from="W",
-                names_prefix="Rel. Weights: ")
+    pivot_longer(cols=Cols, names_to="Category", values_to="Excess Pop.")
   
-  Exc <- LX$Excess %>% dplyr::filter(Numerator %in% Numerators,
-                                     Denominator=="Population") %>%
-    dplyr::select(c("Numerator",all_of(Cols))) %>%
-    pivot_longer(cols=Cols, names_to="Category", values_to="W") %>%
-    pivot_wider(id_cols=Category, names_from=Numerator, values_from="W",
-                names_prefix="Excess Pop: ")
+  tbl_full <- tbl %>% dplyr::filter(Analysis==Denom) %>% 
+    dplyr::rename(Denominator=Analysis) %>%
+    right_join(tbl %>% dplyr::filter(Analysis %in% Props_Use) %>%
+                 dplyr::rename(Proportion="Population Proportion",
+                               Numerator=Analysis),
+               by=join_by(Category)) %>%
+    right_join(AbsW, by=join_by(Category,Numerator)) %>%
+    right_join(RelW, by=join_by(Category,Numerator)) %>%
+    right_join(Exc, by=join_by(Category,Numerator)) %>%
+    dplyr::mutate(Analysis=factor(Numerator,
+                                  levels=Props_Use,
+                                  labels=Props_Use),
+                  Category=factor(Category,
+                                  levels=Cols,
+                                  labels=Cols)) %>%
+    dplyr::select(-c("Numerator","Denominator")) %>%
+    dplyr::select(Analysis,Category,everything()) %>%
+    dplyr::arrange(desc(Analysis),Category)
   
-  # %>% dplyr::arrange(desc(`Population Proportion`))
+  return(tbl_full)
+}
+
+Table_All <- function(Name, Year=2020, ColNames=NULL,
+                      Props_Use=Numerators) {
+  Tbl_List <- list()
+  for (denom in Denominators) {
+    Tbl_List[[denom]] <- Table(Name, Year, ColNames, Props_Use, Denom=denom)
+  }
+  assign(paste(Name, Year, "Res", sep="_"),
+         value=Tbl_List)
+  save(list=paste(Name, Year, "Res", sep="_"),
+       file=paste0("res/",Name,"_",Year,".Rda"))
 }
