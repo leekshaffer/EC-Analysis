@@ -13,10 +13,6 @@ Analyze_List <- function(Name, Year=2020, Use_CD=TRUE,
   Obj <- get(paste(Name, Year, sep="_"))
   
   ColNames <- ColOrders[[Name]]
-  if (paste(Name, "Addl", sep="_") %in% names(ColOrders)) {
-    ColNames <- c(ColNames, ColOrders[[paste(Name, "Addl", sep="_")]])
-  }
-  
   ColNames_Use <- ColNames[ColNames %in% Obj$VarNames]
   Referent <- ColNames_Use[1]
   Group_Cols <- c("Total", ColNames_Use)

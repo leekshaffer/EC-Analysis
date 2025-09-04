@@ -9,7 +9,5 @@ names(Referents) <- Names
 ColOrders <- list(Pop_RE=c("White", "Hispanic", "Black", "Asian", "Multiple", "AIAN", "NHOPI", "Other"),
                   Pop_AgeCat=c("0-17", "18-39", "40-64", "65+"),
                   Pop_Sex=c("Female", "Male"),
-                  Pop_UR=c("Urban", "Rural"),
-                  HH_RO=c("Renter", "Owner: Mortgage", "Owner: Clear"),
-                  Pop_UR_Addl=c("Urbanized Area", "Urban Cluster"),
-                  HH_RO_Addl=c("Owner"))
+                  Pop_UR=c("Urban", "Rural","Urbanized Area", "Urban Cluster"),
+                  HH_RO=c("Renter", "Owner: Mortgage", "Owner: Clear", "Owner"))
