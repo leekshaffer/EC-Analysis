@@ -2,15 +2,16 @@ library(shiny)
 library(tidyverse)
 library(DT)
 library(bslib)
+library(scales)
 
 ## Info needed to run:
-source("R/00-key_values.R", local=TRUE)
+source("../R/00-key_values.R", local=TRUE)
 
 ## Import Census Res Data Files
 for (Name in Names) {
-  load(file=paste0("res/Census_Trend/",Name,"_Trend.Rda"))
+  load(file=paste0("../res/Census_Trend/",Name,"_Trend.Rda"))
   for (Year in CensusYrs) {
-    load(file=paste0("res/Census/",Name,"_",Year,".Rda"))
+    load(file=paste0("../res/Census/",Name,"_",Year,".Rda"))
   }
 }
 
@@ -170,9 +171,9 @@ ui <- fluidPage(
                              label = h4("Focus Analysis"),
                              choices= as.list(Num_Titled),
                              selected = "Electoral College"),
-                     h5("Data Sources:"),
-                     a("tidycensus",
-                       href="https://walker-data.com/tidycensus/")
+                 h5("Data Sources:"),
+                 a("tidycensus",
+                   href="https://walker-data.com/tidycensus/")
                ),
                accordion(
                  open = c("All Analyses: Proportions",
@@ -190,8 +191,8 @@ ui <- fluidPage(
                )
              )
     )
-    )
   )
+)
 
 ## Server:
 server <- function(input, output) {

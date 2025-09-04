@@ -1,5 +1,6 @@
 library(tidyverse)
 library(patchwork)
+library(scales)
 
 source("R/00-key_values.R")
 
