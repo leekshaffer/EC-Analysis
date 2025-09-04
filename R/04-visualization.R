@@ -11,30 +11,34 @@ Scale_House <- c(0.970, 1.025)
 Scale_Senate <- c(0.55, 2.20)
 Scale_EC <- c(0.9, 1.2)
 
-Dat_Trend <- function(Name, Years, ColNames=NULL) {
-  Weights <- NULL
-  for (year in Years) {
-    load(paste0("res/",Name,"_",year,".Rda"))
-    Weights <- bind_rows(Weights,
-                         get(paste(Name,year,"Res", sep="_"))$Weights %>%
-                           mutate(Year=year))
+Dat_Trend <- function(Name, Years=CensusYrs, Type="Census") {
+  for (denom in Denominators) {
+    assign(x=paste("Tbl", denom, sep="_"),
+           value=NULL)
   }
-  Trend_Dat <- Weights %>% dplyr::filter(Numerator %in% c("House", "Senate", "EC"),
-                                         Denominator %in% c("Population"))
-  if (is.null(ColNames)) {
-    ColNames <- colnames(Trend_Dat)[!(colnames(Trend_Dat) %in% c("Numerator","Denominator","Total","Year"))]
+  for (Year in Years) {
+    load(paste0("res/",Type,"/",Name,"_",Year,".Rda"))
+    for (denom in Denominators) {
+      assign(x=paste("Tbl", denom, sep="_"),
+             value=bind_rows(get(paste("Tbl", denom, sep="_")),
+                             get(paste(Name, Year, "Res", sep="_"))[[denom]] %>% 
+                               dplyr::mutate(Year=Year)))
+    }
   }
-  Dat <- Trend_Dat %>% dplyr::select(c("Numerator", "Year", all_of(ColNames))) %>% 
-    pivot_longer(cols=ColNames, names_to="Category",
-                 values_to="Weight") %>%
-    dplyr::mutate(Category=factor(Category,
-                  levels=ColNames, labels=ColNames))
-  return(Dat)
+  
+  Dat_List <- list()
+  for (denom in Denominators) {
+    Dat_List[[denom]] <- get(paste("Tbl", denom, sep="_"))
+  }
+  return(Dat_List)
 }
 
-Viz_Trend <- function(Dat, 
+Viz_Trend <- function(Dat_List, denom="Population", 
                          Log=TRUE, 
                          Facets="none", scales="fixed") {
+  Dat <- Dat_List[[denom]]
+  
+  ## Paused as of 9/4 11:38
   if (Facets=="vertical") {
     plot <- ggplot(Dat, mapping=aes(x=Year, y=Weight, 
                                     group=interaction(Category,Numerator), 
