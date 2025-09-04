@@ -1,3 +1,5 @@
+library(tidyverse)
+
 Names <- c("Pop_RE", "Pop_AgeCat", "Pop_Sex", 
            "Pop_UR", "HH_RO")
 Titles <- c("Race/Ethnicity", "Age Category", "Sex", 
