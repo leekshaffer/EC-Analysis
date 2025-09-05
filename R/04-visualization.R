@@ -23,35 +23,29 @@ Trend_Viz <- function(Name, Type="Census",
   for (Denom in Denominators) {
     Dat <- Full %>% dplyr::filter(Denominator==Denom)
     
-    plot <- ggplot(Dat, mapping=aes(x=Year, y=`Abs. Weight`, 
-                                    group=interaction(Category,Analysis), 
-                                    linetype=Category, 
-                                    color=Category)) +
-      geom_point() +
-      geom_line() +
-      theme_bw() + 
-      facet_wrap(facets=~factor(Analysis, levels=rev(levels(Analysis))), 
-                 dir="v",
-                 scales=Fac_Scales) +
-      theme(legend.position="bottom",
-            legend.title=element_blank()) +
-      guides(linetype=guide_legend(nrow=2, byrow=TRUE),
-             color=guide_legend(nrow=2, byrow=TRUE))
-    
-    if (Log) {
-      plot <- plot + scale_y_log10(name="Weight") +
-        scale_x_continuous(breaks=CensusYrs, minor_breaks=NULL)
-    } else {
-      plot <- plot + scale_y_continuous(name="Weight") +
-        scale_x_continuous(breaks=CensusYrs, minor_breaks=NULL)
-    }
-    
-    if (Fac_ggsave) {
-      ggsave(filename=paste0("figs/",Type,"/",Denom,"/Trend_",Name,".png"),
-             plot=plot,
-             device=png,
-             width=4, height=6, units="in", dpi=300)
-    }
+    # p_fac <- ggplot(Dat, mapping=aes(x=Year, y=`Abs. Weight`, 
+    #                                 group=interaction(Category,Analysis), 
+    #                                 linetype=Category, 
+    #                                 color=Category)) +
+    #   geom_point() +
+    #   geom_line() +
+    #   theme_bw() + 
+    #   facet_wrap(facets=~factor(Analysis, levels=rev(levels(Analysis))), 
+    #              # dir="v",
+    #              nrow=2, ncol=2,
+    #              scales=Fac_Scales) +
+    #   theme(legend.position="bottom",
+    #         legend.title=element_blank()) +
+    #   guides(linetype=guide_legend(nrow=2, byrow=TRUE),
+    #          color=guide_legend(nrow=2, byrow=TRUE))
+    # 
+    # if (Log) {
+    #   p_fac <- p_fac + scale_y_log10(name="Weight") +
+    #     scale_x_continuous(breaks=CensusYrs, minor_breaks=NULL)
+    # } else {
+    #   p_fac <- p_fac + scale_y_continuous(name="Weight") +
+    #     scale_x_continuous(breaks=CensusYrs, minor_breaks=NULL)
+    # }
     
     for (num in Numerators) {
       p1 <- ggplot(Dat %>% dplyr::filter(Analysis==num),
@@ -63,10 +57,11 @@ Trend_Viz <- function(Name, Type="Census",
         geom_line() +
         theme_bw() +
         scale_x_continuous(breaks=CensusYrs, minor_breaks=NULL) +
-        scale_y_log10(limits=Trend_Scales[[num]]) +
-        theme(legend.position="bottom",
-              legend.title=element_blank()) +
-        labs(subtitle=num)
+        scale_y_log10(name="Weight", limits=Trend_Scales[[num]]) +
+        theme(legend.position="bottom") +
+        labs(title=names(Num_Titled)[Num_Titled==num],
+             linetype=Titles[Name],
+             color=Titles[Name])
       if (length(unique(Dat$Category)) > 3) {
         if (length(unique(Dat$Category)) > 6) {
           p1 <- p1 +
@@ -82,13 +77,34 @@ Trend_Viz <- function(Name, Type="Census",
              value=p1)
     }
     
-    p_col <- (get(paste("p", Numerators[length(Numerators)], sep="_")) + labs(title=Titles[Name]))
+    p_col <- get(paste("p", Numerators[length(Numerators)], sep="_")) # + labs(title=Titles[Name])
     for (num in Numerators[(length(Numerators)-1):1]) {
-      p_col <- p_col /
+      p_col <- p_col +
         get(paste("p", num, sep="_"))
     }
-    p_col <- p_col + 
-      plot_layout(guides="collect") & theme(legend.position="bottom")
+    p_col <- p_all + 
+      plot_layout(ncol=1, guides="collect") & theme(legend.position="bottom")
+    
+    p_fac <- get(paste("p", Numerators[length(Numerators)], sep="_")) +
+      geom_hline(yintercept=1, linetype="dashed", color="gray50") +
+      scale_y_log10(name="Weight") +
+      guides(linetype=guide_legend(direction="vertical"),
+             color=guide_legend(direction="vertical")) +
+      labs(tag=paste0(LETTERS[1], ")"))
+    j <- 2
+    for (num in Numerators[(length(Numerators)-1):1]) {
+      p_fac <- p_fac +
+        get(paste("p", num, sep="_")) +
+        geom_hline(yintercept=1, linetype="dashed", color="gray50") +
+        scale_y_log10(name="Weight") +
+        guides(linetype=guide_legend(direction="vertical"),
+               color=guide_legend(direction="vertical")) +
+        labs(tag=paste0(LETTERS[j], ")"))
+      j <- j+1
+    }
+    p_fac <- p_fac + guide_area() +
+      plot_layout(ncol=2, nrow=2, byrow=TRUE, guides="collect") & 
+      theme(legend.position="bottom")
     
     if (Col_ggsave) {
       ggsave(filename=paste0("figs/",Type,"/",Denom,"/Trend_",Name,"_Col.png"),
@@ -97,11 +113,18 @@ Trend_Viz <- function(Name, Type="Census",
              width=4, height=6, units="in", dpi=300)
     }
     
+    if (Fac_ggsave) {
+      ggsave(filename=paste0("figs/",Type,"/",Denom,"/Trend_",Name,".png"),
+             plot=p_fac,
+             device=png,
+             width=7, height=6, units="in", dpi=300)
+    }
+    
     DenNum <- (1:length(Denominators))[Denominators==Denom]
     assign(x=paste("Col", DenNum, Name, sep="_"),
            value=p_col)
     assign(x=paste("Facet", DenNum, Name, sep="_"),
-           value=plot)
+           value=p_fac)
   }
 
   save(list=paste("Facet", 1:length(Denominators), Name, sep="_"),
