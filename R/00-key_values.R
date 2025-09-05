@@ -28,7 +28,7 @@ names(Census_UseCD) <- CensusYrs
 ## Note: if you change these orders, you will need to change the orders 
 ### in the import files so that the creation of Totals and Proportions matches.
 Numerators <- c("EC", "Senate", "House")
-Denominators <- c("Population", "Pop: Without DC", "Pop: With PR")
+Denominators <- c("50 States and DC", "50 States", "50 States, DC, PR")
 
 ## Special named vectors for Shiny input
 Denom_Titled <- Denominators

@@ -179,5 +179,5 @@ for (Name in Names) {
          value=bind_rows(lapply(CensusYrs, 
                    function(x) Analyze_List_Yr(Name, Year=x, Type="Census"))))
   save(list=paste(Name, "Res", sep="_"),
-       file=paste0("res/Census_Full/", Name, "_Res.Rda"))
+       file=paste0("res/Census/", Name, "_Res.Rda"))
 }
