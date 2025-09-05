@@ -7,3 +7,6 @@ R/00-censusAPI.R
 
 int/ACS/
 R/01b-acs_import.R
+
+rsconnect/
+RShinyApp/rsconnect/
