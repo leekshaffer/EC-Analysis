@@ -251,13 +251,13 @@ Plot_Props <- function(Name, Yr=2020,
     
     Pop <- Dat %>% dplyr::filter(Analysis==Numerators[1]) %>%
       dplyr::select(Analysis,Category,`Population Proportion`) %>%
-      dplyr::mutate(Analysis=Denom) %>%
+      dplyr::mutate(Analysis="Population") %>%
       rename(Proportion=`Population Proportion`)
     
     Props <- Dat %>% dplyr::select(-c("Population Proportion")) %>%
       bind_rows(Pop) %>%
       dplyr::filter(Category %in% Cols) %>%
-      dplyr::mutate(Analysis=factor(Analysis, levels=c(Numerators,Denom))) %>%
+      dplyr::mutate(Analysis=factor(Analysis, levels=c(Numerators,"Population"))) %>%
       dplyr::arrange(Analysis, Category)
       
     Props_Viz <- Props %>%
