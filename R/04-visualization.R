@@ -4,6 +4,12 @@ library(scales)
 
 source("R/00-key_values.R")
 
+for (Type in c("Census")) {
+  for (Name in Names) {
+    load(paste0("res/", Type, "/", Name, "_Res.Rda"))
+  }
+}
+
 # Trend Plots:
 
 Trend_Viz <- function(Name, Type="Census",
@@ -12,7 +18,6 @@ Trend_Viz <- function(Name, Type="Census",
                       Col_ggsave=FALSE) {
   ## If _ggsave = TRUE, it will save those plots as pngs
   ## Regardless, it saves .Rdas of the plots
-  load(paste0("res/", Type, "/", Name, "_Res.Rda"))
   Full <- get(paste(Name, "Res", sep="_"))
   
   for (Denom in Denominators) {
@@ -134,12 +139,78 @@ Trend_Viz_All <- function(Names, Names_Sub=NULL,
 
 Trend_Viz_All(Names, Names_Sub=Names[c(1,4,5)], Type="Census")
 
+# Single-Year and -Analysis Weight Plots:
+
+Plot_Wts <- function(Name, Yr=2020,
+                     Num=Numerators[1],
+                     Type="Census",
+                     Log=TRUE, Wt_ggsave=TRUE) {
+
+  Dat <- get(paste(Name, "Res", sep="_")) %>%
+    dplyr::filter(Year==Yr,
+                  Analysis==Num) %>%
+    dplyr::mutate(Label=format(round(`Abs. Weight`, digits=3),
+                               nsmall=3, digits=3))
+  
+  ColNames <- ColOrders[[Name]]
+  Cols <- unique(Dat$Category)
+  
+  for (Denom in Denominators) {
+    plot <- ggplot(Dat %>% dplyr::filter(Denominator==Denom),
+           mapping=aes(x=Category, y=`Abs. Weight`,
+                       color=Category)) +
+      geom_point(size=2.5) +
+      geom_text(mapping=aes(label=Label),
+                vjust=-1) +
+      geom_hline(yintercept=1, color="gray50", linetype="dashed") +
+      theme_bw() +
+      theme(legend.position="none",
+            legend.title=element_blank()) +
+      labs(x="Demographic Category",
+           title=paste0(names(Num_Titled)[Num_Titled==Num], " Weights by ", Titles[Name]))
+    
+    if (Log) {
+      plot <- plot + scale_y_log10(name="Weight",
+                                   expand=expansion(mult=c(0.05, 0.15)))
+    } else {
+      plot <- plot + scale_y_continuous(name="Weight",
+                                        expand=expansion(mult=c(0.05, 0.15)))
+    }
+    
+    if (length(Cols) < length(ColNames)) {
+      Cols_Spec <- (1:length(ColNames))[ColNames %in% Cols]
+      plot <- plot +
+        scale_color_manual(values=hue_pal()(length(ColNames))[Cols_Spec])
+    }
+    
+    DenNum <- (1:length(Denominators))[Denominators==Denom]
+    if (Wt_ggsave) {
+      ggsave(filename=paste0("figs/",Type,"/",Denom,"/Weights/",
+                             Name,"_",Yr,"_",Num,".png"),
+             plot=plot,
+             device=png, width=6, height=3, units="in", dpi=300)
+    }
+    assign(x=paste("Weights", DenNum, 
+                   Name, Yr, Num, sep="_"),
+           value=plot)
+  }
+  save(list=paste("Weights", 1:length(Denominators), Name, Yr, Num, sep="_"),
+       file=paste0("res/",Type,"_Weights/",
+                   Name, "_", Yr, "_", Num, ".Rda"))
+}
+
+for (Name in Names) {
+  for (Yr in CensusYrs) {
+    for (Num in Numerators) {
+      Plot_Wts(Name, Yr, Num)
+    }
+  }
+}
+
 # Proportion Plots:
 
 Plot_Props <- function(Name, Yr=2020, 
                        Type="Census", Prop_ggsave=TRUE) {
-  load(paste0("res/",Type,"/",Name,"_Res.Rda"))
-  
   ColNames <- ColOrders[[Name]]
   if (paste(Name, Yr, sep="_") %in% names(Cols_Specs)) {
     Cols_Spec <- Cols_Specs[[paste(Name, Yr, sep="_")]]
@@ -176,17 +247,18 @@ Plot_Props <- function(Name, Yr=2020,
                                                                      digits=2, nsmall=2),
                                                        sep=" "),
                                         sep="\n")),
-                    Label_Use=if_else(Proportion < 0.05,
-                                      "", Label))
+                    Label_Use=if_else(Proportion < 0.08,
+                                      "", Label),
+                    PercLabel=if_else(Proportion < 0.08,
+                                      "", Percentage))
     plot <- ggplot(Props_Viz) +
       geom_col(mapping=aes(y=Analysis, fill=Category,
                            x=Proportion),
                position = position_stack(reverse=TRUE)) +
       geom_text(mapping=aes(x=Position,
                             y=Analysis,
-                            label=Label_Use),
-                 hjust="center",
-                size=2) +
+                            label=PercLabel),
+                 hjust="center") +
       theme_bw() +
       labs(y="", fill="",
            title=paste0("Population Proportions by ",Titles[Name])) +
@@ -207,11 +279,11 @@ Plot_Props <- function(Name, Yr=2020,
              device=png, width=6, height=3, units="in", dpi=300)
     }
     assign(x=paste("Props", (1:length(Denominators))[Denominators==Denom], 
-                   Name, sep="_"),
+                   Name, Yr, sep="_"),
            value=plot)
   }
     
-  save(list=paste("Props", 1:length(Denominators), Name, sep="_"),
+  save(list=paste("Props", 1:length(Denominators), Name, Yr, sep="_"),
        file=paste0("res/",Type,"_Props/",Name,"_",Yr,".Rda"))
 }
 

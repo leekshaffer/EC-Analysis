@@ -1,0 +1,12 @@
+name: RShinyApp
+title: RShinyApp
+username: leekshaffer
+account: leekshaffer
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15357203
+bundleId: 10864614
+url: https://leekshaffer.shinyapps.io/RShinyApp/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

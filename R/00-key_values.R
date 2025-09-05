@@ -32,9 +32,6 @@ Numerators <- c("EC", "Senate", "House")
 Denominators <- c("50 States and DC", "50 States", "50 States, DC, PR")
 
 ## Special named vectors for Shiny input
-Denom_Titled <- Denominators
-names(Denom_Titled) <- c("With DC, Not PR", "Without DC and PR", "With DC and PR")
-
 Num_Titled <- rev(Numerators)
 names(Num_Titled) <- c("House", "Senate", "Electoral College")
 
