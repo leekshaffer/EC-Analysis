@@ -1,5 +1,6 @@
 library(shiny)
 library(tidyverse)
+library(patchwork)
 library(DT)
 library(bslib)
 library(scales)
