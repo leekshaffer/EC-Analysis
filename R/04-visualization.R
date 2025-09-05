@@ -57,7 +57,6 @@ Trend_Viz <- function(Name, Type="Census",
         geom_line() +
         theme_bw() +
         scale_x_continuous(breaks=CensusYrs, minor_breaks=NULL) +
-        scale_y_log10(name="Weight", limits=Trend_Scales[[num]]) +
         theme(legend.position="bottom") +
         labs(title=names(Num_Titled)[Num_Titled==num],
              linetype=Titles[Name],
@@ -77,12 +76,15 @@ Trend_Viz <- function(Name, Type="Census",
              value=p1)
     }
     
-    p_col <- get(paste("p", Numerators[length(Numerators)], sep="_")) # + labs(title=Titles[Name])
+    p_col <- get(paste("p", Numerators[length(Numerators)], sep="_")) +
+      scale_y_log10(name="Weight", limits=Trend_Scales[[num]])
+    
     for (num in Numerators[(length(Numerators)-1):1]) {
       p_col <- p_col +
-        get(paste("p", num, sep="_"))
+        get(paste("p", num, sep="_")) +
+        scale_y_log10(name="Weight", limits=Trend_Scales[[num]])
     }
-    p_col <- p_all + 
+    p_col <- p_col + 
       plot_layout(ncol=1, guides="collect") & theme(legend.position="bottom")
     
     p_fac <- get(paste("p", Numerators[length(Numerators)], sep="_")) +
