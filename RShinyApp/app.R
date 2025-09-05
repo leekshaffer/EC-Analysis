@@ -5,17 +5,19 @@ library(bslib)
 library(scales)
 
 ## Info needed to run:
-source("../R/00-key_values.R", local=TRUE)
+source("./00-key_values.R", local=TRUE)
 
 ## Import Census Res Data Files
-for (Name in Names) {
-  load(file=paste0("../res/Census/",Name,"_Res.Rda"))
-  load(file=paste0("../res/Census_Facets/",Name,".Rda"))
-  for (Yr in CensusYrs) {
-    load(file=paste0("../res/Census_Props/",Name,"_",Yr,".Rda"))
-    for (Num in Numerators) {
-      load(file=paste0("../res/",Type,"_Weights/",
-                       Name, "_", Yr, "_", Num, ".Rda"))
+for (Type in c("Census")) {
+  for (Name in Names) {
+    load(file=paste0("res/",Type,"/",Name,"_Res.Rda"))
+    load(file=paste0("res/",Type,"_Facets/",Name,".Rda"))
+    for (Yr in CensusYrs) {
+      load(file=paste0("res/",Type,"_Props/",Name,"_",Yr,".Rda"))
+      for (Num in Numerators) {
+        load(file=paste0("res/",Type,"_Weights/",
+                         Name, "_", Yr, "_", Num, ".Rda"))
+      }
     }
   }
 }
