@@ -47,7 +47,10 @@ ui <- fluidPage(
                              label = h4("Focus Analysis"),
                              choices= as.list(Num_Titled),
                              selected = "Electoral College"),
-                 h5("Data Sources:"),
+                 h5("Details at GitHub:"),
+                 a("https://bit.ly/Elec-Analysis", href="https://bit.ly/Elec-Analysis"),
+                 h5("Data Source:"),
+                 h6("Census API accessed with:"),
                  a("tidycensus",
                    href="https://walker-data.com/tidycensus/")
                ),
