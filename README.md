@@ -2,6 +2,8 @@
 
 Created: September 5, 2025
 
+Shareable Link: <https://bit.ly/Elec-Analysis>
+
 Metrics and visualizations of the distortion in U.S. electoral populations by various demographic characteristics
 
 A manuscript describing the methods and results is coming soon.
