@@ -4,10 +4,7 @@ library(scales)
 
 source("R/00-key_values.R")
 
-# Trend Plots
-Scale_House <- c(0.970, 1.025)
-Scale_Senate <- c(0.55, 2.20)
-Scale_EC <- c(0.9, 1.2)
+# Trend Plots:
 
 Trend_Viz <- function(Name, Type="Census",
                       Log=TRUE, 
@@ -61,7 +58,7 @@ Trend_Viz <- function(Name, Type="Census",
         geom_line() +
         theme_bw() +
         scale_x_continuous(breaks=CensusYrs, minor_breaks=NULL) +
-        scale_y_log10(limits=get(paste("Scale", num, sep="_"))) +
+        scale_y_log10(limits=Trend_Scales[[num]]) +
         theme(legend.position="bottom",
               legend.title=element_blank()) +
         labs(subtitle=num)
@@ -137,107 +134,90 @@ Trend_Viz_All <- function(Names, Names_Sub=NULL,
 
 Trend_Viz_All(Names, Names_Sub=Names[c(1,4,5)], Type="Census")
 
+# Proportion Plots:
 
-
-
-p_big <- NULL
-for (Name in Names) {
-  p_big <- p_big | get(paste(Name, "Plot", "Col", sep="_"))
-}
-ggsave(filename="figs/Census/Trend_Plot_Full.png",
-       plot=p_big,
-       width=12, height=7, units="in", dpi=300, device=png)
-
-p_med <- NULL
-for (Name in Names[c(1,4,5)]) {
-  p_med <- p_med | get(paste(Name, "Plot", "Col", sep="_"))
-}
-ggsave(filename="figs/Census/Trend_Plot_Three.png",
-       plot=p_med,
-       width=8.8, height=5.8, units="in", dpi=300, device=png)
-
-# Proportion Plots
-Plot_Props <- function(Name, Year=2020, Type="Census",
-                       denom="Population",
-                       Cols_Spec=NULL) {
-  load(paste0("res/",Type,"/",Name,"_",Year,".Rda"))
-  Dat <- get(paste(Name, Year, "Res", sep="_"))[[denom]]
+Plot_Props <- function(Name, Yr=2020, 
+                       Type="Census", Prop_ggsave=TRUE) {
+  load(paste0("res/",Type,"/",Name,"_Res.Rda"))
   
-  # if (paste(Name, "Prop", Year, sep="_") %in% names(ColOrders)) {
-  #   ColNames <- ColOrders[[paste(Name, "Prop", Year, sep="_")]]
-  # } else {
-  #   ColNames <- ColOrders[[Name]]
-  # }
   ColNames <- ColOrders[[Name]]
-  if (is.null(Cols_Spec)) {
-    Cols <- ColNames[ColNames %in% unique(Dat$Category)]
-  } else {
+  if (paste(Name, Yr, sep="_") %in% names(Cols_Specs)) {
+    Cols_Spec <- Cols_Specs[[paste(Name, Yr, sep="_")]]
     Cols <- ColNames[Cols_Spec]
+  } else {
+    Cols_Spec <- NULL
+    Cols <- ColNames
   }
   
-  Pop <- Dat %>% dplyr::filter(Analysis==Numerators[1]) %>%
-    dplyr::select(Analysis,Category,`Population Proportion`) %>%
-    dplyr::mutate(Analysis=denom) %>%
-    rename(Proportion=`Population Proportion`)
-  
-  Props <- Dat %>% dplyr::select(-c("Population Proportion")) %>%
-    bind_rows(Pop) %>%
-    dplyr::filter(Category %in% Cols) %>%
-    dplyr::mutate(Analysis=factor(Analysis, levels=c(Numerators,denom))) %>%
-    dplyr::arrange(Analysis, Category)
+  for (Denom in Denominators) {
+    Dat <- get(paste(Name, "Res", sep="_")) %>%
+      dplyr::filter(Year==Yr, Denominator==Denom)
     
-  Props_Viz <- Props %>%
-    bind_cols(Props %>% group_by(Analysis) %>%
-                dplyr::reframe(CS=cumsum(Proportion)-Proportion) %>%
-                dplyr::select(CS)) %>%
-    dplyr::mutate(Position=CS+Proportion/2,
-                  Percentage=paste0(format(round(Proportion*100, digits=2),
-                                           digits=2, nsmall=2), "%"),
-                  Label=if_else(is.na(`Abs. Weight`), Percentage,
-                                paste(Percentage, paste("Wt:", format(round(`Abs. Weight`, digits=2), 
-                                                                   digits=2, nsmall=2),
-                                                     sep=" "),
-                                      sep="\n")),
-                  Label_Use=if_else(Proportion < 0.05,
-                                    "", Label))
-  plot <- ggplot(Props_Viz) +
-    geom_col(mapping=aes(y=Analysis, fill=Category,
-                         x=Proportion),
-             position = position_stack(reverse=TRUE)) +
-    geom_text(mapping=aes(x=Position,
-                          y=Analysis,
-                          label=Label_Use),
-               hjust="center",
-              size=2) +
-    theme_bw() +
-    labs(y="", fill="",
-         title=paste0("Population Proportions by ",Titles[Name])) +
-    # guides(fill=guide_legend(reverse=TRUE)) +
-    theme(legend.position="bottom")
-  if (length(Cols) > 4) {
-    plot <- plot + 
-      guides(fill=guide_legend(nrow=2, byrow=TRUE))
-                               # reverse=TRUE))
+    Pop <- Dat %>% dplyr::filter(Analysis==Numerators[1]) %>%
+      dplyr::select(Analysis,Category,`Population Proportion`) %>%
+      dplyr::mutate(Analysis=Denom) %>%
+      rename(Proportion=`Population Proportion`)
+    
+    Props <- Dat %>% dplyr::select(-c("Population Proportion")) %>%
+      bind_rows(Pop) %>%
+      dplyr::filter(Category %in% Cols) %>%
+      dplyr::mutate(Analysis=factor(Analysis, levels=c(Numerators,Denom))) %>%
+      dplyr::arrange(Analysis, Category)
+      
+    Props_Viz <- Props %>%
+      bind_cols(Props %>% group_by(Analysis) %>%
+                  dplyr::reframe(CS=cumsum(Proportion)-Proportion) %>%
+                  dplyr::select(CS)) %>%
+      dplyr::mutate(Position=CS+Proportion/2,
+                    Percentage=paste0(format(round(Proportion*100, digits=2),
+                                             digits=2, nsmall=2), "%"),
+                    Label=if_else(is.na(`Abs. Weight`), Percentage,
+                                  paste(Percentage, paste("Wt:", format(round(`Abs. Weight`, digits=2), 
+                                                                     digits=2, nsmall=2),
+                                                       sep=" "),
+                                        sep="\n")),
+                    Label_Use=if_else(Proportion < 0.05,
+                                      "", Label))
+    plot <- ggplot(Props_Viz) +
+      geom_col(mapping=aes(y=Analysis, fill=Category,
+                           x=Proportion),
+               position = position_stack(reverse=TRUE)) +
+      geom_text(mapping=aes(x=Position,
+                            y=Analysis,
+                            label=Label_Use),
+                 hjust="center",
+                size=2) +
+      theme_bw() +
+      labs(y="", fill="",
+           title=paste0("Population Proportions by ",Titles[Name])) +
+      theme(legend.position="bottom")
+    if (length(Cols) > 4) {
+      plot <- plot + 
+        guides(fill=guide_legend(nrow=2, byrow=TRUE))
+                                 # reverse=TRUE))
+    }
+    if (!is.null(Cols_Spec)) {
+      plot <- plot +
+        scale_fill_manual(values=hue_pal()(length(ColNames))[Cols_Spec])
+    }
+    
+    if (Prop_ggsave) {
+      ggsave(filename=paste0("figs/",Type,"/",Denom,"/Props_",Name,"_",Yr,".png"),
+             plot=plot,
+             device=png, width=6, height=3, units="in", dpi=300)
+    }
+    assign(x=paste("Props", (1:length(Denominators))[Denominators==Denom], 
+                   Name, sep="_"),
+           value=plot)
   }
-  if (!is.null(Cols_Spec)) {
-    plot <- plot +
-      scale_fill_manual(values=hue_pal()(length(ColNames))[Cols_Spec])
-  }
-  
-  ggsave(filename=paste0("figs/",Type,"/Props_",Name,".png"),
-         plot=plot,
-         device=png, width=6, height=3, units="in", dpi=300)
+    
+  save(list=paste("Props", 1:length(Denominators), Name, sep="_"),
+       file=paste0("res/",Type,"_Props/",Name,"_",Yr,".Rda"))
 }
 
 for (Name in Names) {
-  if (Name=="Pop_UR") {
-    Plot_Props(Name, Year=2020, Type="Census",
-               denom="Population", Cols=1:2)
-  } else if (Name=="HH_RO") {
-    Plot_Props(Name, Year=2020, Type="Census",
-               denom="Population", Cols=1:3)
-  } else {
-    Plot_Props(Name, Year=2020, Type="Census",
-               denom="Population", Cols=NULL)
+  for (Yr in CensusYrs) {
+    Plot_Props(Name, Yr,
+               Type="Census", Prop_ggsave=TRUE)
   }
 }

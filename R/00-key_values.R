@@ -14,12 +14,13 @@ ColOrders <- list(Pop_RE=c("White", "Hispanic", "Black", "Asian",
                   Pop_Sex=c("Female", "Male"),
                   Pop_UR=c("Rural", "Urban", "Urban Cluster", "Urbanized Area"),
                   HH_RO=c("Renter", "Owner: Mortgage", "Owner: Clear", "Owner"))
-                  # HH_RO_Prop_2000=c("Renter", "Owner"),
-                  # HH_RO_Prop_2010=c("Renter", "Owner: Mortgage", "Owner: Clear"),
-                  # HH_RO_Prop_2020=c("Renter", "Owner: Mortgage", "Owner: Clear"),
-                  # Pop_UR_Prop_2000=c("Rural", "Urban Cluster", "Urbanized Area"),
-                  # Pop_UR_Prop_2010=c("Rural", "Urban Cluster", "Urbanized Area"),
-                  # Pop_UR_Prop_2020=c("Rural", "Urban"))
+
+Cols_Specs <- list(HH_RO_2000=c(1,4),
+                  HH_RO_2010=1:3,
+                  HH_RO_2020=1:3,
+                  Pop_UR_2000=c(1,3:4),
+                  Pop_UR_2010=c(1,3:4),
+                  Pop_UR_2020=1:2)
 
 CensusYrs <- c(2000, 2010, 2020)
 Census_UseCD <- c(FALSE, TRUE, TRUE)
@@ -39,3 +40,8 @@ names(Num_Titled) <- c("House", "Senate", "Electoral College")
 
 Names_Titled <- Names
 names(Names_Titled) <- Titles
+
+## Trend Plot Scales:
+Trend_Scales <- list(House=c(0.970, 1.025),
+                     Senate=c(0.55, 2.20),
+                     EC=c(0.9, 1.2))
