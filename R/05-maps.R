@@ -5,7 +5,7 @@ load(file="int/Apportion.Rda")
 # library(maps)
 # maps::map(database="state")
 
-## Mapping data:
+## Creating Mapping data frame:
 Yr <- 2020
 Type <- "Census"
 load(paste0("int/", Type, "/Pop_Sex_", Yr, ".Rda"))
@@ -33,6 +33,7 @@ file_usm <- us_map(regions="states", exclude="PR") %>%
   dplyr::mutate(House_D_Prop=House_D/House,
                 Senate_D_Prop=Senate_D/Senate,
                 EC_D_Prop=EC_D/EC)
+save(file_usm, file=paste0("res/",Type,"/Map_States_", Yr, ".Rda"))
 
 ## Plotting:
 Breaks <- list(EC=c(0.7, 1.0, 1.4, 2.0, 2.8),
@@ -80,3 +81,4 @@ for (num in Numerators) {
   ggsave(filename=paste0("figs/Maps/Map_",num,"_Votes.png"),
          device=png, width=6, height=4, units="in", dpi=300)
 }
+
