@@ -1,7 +1,7 @@
 library(tidyverse)
 library(readxl)
 
-## Importing Apportionment Data:
+## Importing Apportionment and Election Data:
 Abb <- read_excel(path="data/StateAbbrevs.xlsx")
 ECVotes <- read_excel(path="data/ECvotes.xlsx")
 EC <- ECVotes %>%
@@ -37,4 +37,9 @@ House <- unique(House %>% dplyr::select(State)) %>%
   left_join(Abb, by="State") %>%
   dplyr::mutate(House=replace_na(House, 0))
 
-save(list=c("Abb", "EC","EC_State","House"), file="int/Apportion.Rda")
+for (Yr in 2020) {
+  assign(x=paste("DR", "Res", Yr, sep="_"),
+         value=read_excel(path=paste0("data/StateRes_",Yr,".xlsx")))
+}
+
+save(list=c("Abb", "EC", "EC_State", "House", "DR_Res_2020"), file="int/Apportion.Rda")
