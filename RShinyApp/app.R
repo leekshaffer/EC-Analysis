@@ -44,7 +44,7 @@ ui <- fluidPage(
                              choices = as.list(CensusYrs),
                              selected = 2020),
                  selectInput("Numerator",
-                             label = h4("Focus Analysis"),
+                             label = h4("Focus Body"),
                              choices= as.list(Num_Titled),
                              selected = "Electoral College"),
                  h5("Details at GitHub:"),
@@ -56,15 +56,15 @@ ui <- fluidPage(
                ),
                accordion(
                  open = c("All Analyses: Proportions"),
-                 accordion_panel("All Analyses: Proportions",
+                 accordion_panel("Baseline and Represented Proportions by Demographic Category",
                                  plotOutput("AllProp", width="95%")),
-                 accordion_panel("All Analyses: Trends",
+                 accordion_panel("Trends in Absolute Weights by Demographic Category",
                                  plotOutput("AllTrend", width="95%")),
-                 accordion_panel("Focus Year and Analysis: Weights",
+                 accordion_panel("Focus Year and Body: Plot of Weights",
                                  plotOutput("FocWeight", width="95%")),
-                 accordion_panel("Focus Year: Table",
+                 accordion_panel("Focus Year: Table of Proportions and Weights",
                                  DT::dataTableOutput("AllTbl")),
-                 accordion_panel("Focus Analysis: Table",
+                 accordion_panel("Focus Body: Table of Proportions and Weights",
                                  DT::dataTableOutput("FocTbl"))
                )
              )

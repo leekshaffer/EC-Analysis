@@ -1,6 +1,7 @@
 library(tidyverse)
 library(patchwork)
 library(scales)
+library(xtable)
 
 source("R/00-key_values.R")
 
@@ -212,7 +213,7 @@ Plot_Wts <- function(Name, Yr=2020,
     if (Wt_ggsave) {
       ggsave(filename=paste0("figs/",Type,"/",Denom,"/Weights/",
                              Name,"_",Yr,"_",Num,".png"),
-             plot=plot,
+             plot=plot + labs(title=""),
              device=png, width=6, height=3, units="in", dpi=300)
     }
     assign(x=paste("Weights", DenNum, 
@@ -251,13 +252,13 @@ Plot_Props <- function(Name, Yr=2020,
     
     Pop <- Dat %>% dplyr::filter(Analysis==Numerators[1]) %>%
       dplyr::select(Analysis,Category,`Population Proportion`) %>%
-      dplyr::mutate(Analysis="Population") %>%
+      dplyr::mutate(Analysis="Baseline") %>%
       rename(Proportion=`Population Proportion`)
     
     Props <- Dat %>% dplyr::select(-c("Population Proportion")) %>%
       bind_rows(Pop) %>%
       dplyr::filter(Category %in% Cols) %>%
-      dplyr::mutate(Analysis=factor(Analysis, levels=c(Numerators,"Population"))) %>%
+      dplyr::mutate(Analysis=factor(Analysis, levels=c(Numerators,"Baseline"))) %>%
       dplyr::arrange(Analysis, Category)
       
     Props_Viz <- Props %>%
@@ -286,7 +287,8 @@ Plot_Props <- function(Name, Yr=2020,
                  hjust="center") +
       theme_bw() +
       labs(y="", fill="",
-           title=paste0("Population Proportions by ",Titles[Name])) +
+           title="") +
+           # title=paste0("Population Proportions by ",Titles[Name])) +
       theme(legend.position="bottom")
     if (length(Cols) > 4) {
       plot <- plot + 
@@ -318,3 +320,27 @@ for (Name in Names) {
                Type="Census", Prop_ggsave=TRUE)
   }
 }
+
+## Table Function for Manuscript:
+
+Print_Tbl <- function(Type, Yr, Denom, Name, 
+                      Keep_Cols=c("Abs. Weight", "Rel. Weight", "Excess Pop."),
+                      KC_Names=c("AW", "RW", "EP")) {
+  load(file=paste0("res/", Type, "/", Name, "_Res.Rda"))
+  Dat <- get(paste(Name, "Res", sep="_")) %>%
+    dplyr::filter(Year==Yr, Denominator==Denom) %>%
+    dplyr::mutate(AW=format(round(`Abs. Weight`, digits=3), digits=3, nsmall=3),
+                  RW=format(round(`Rel. Weight`, digits=3), digits=3, nsmall=3),
+                  EP=format(round(`Excess Pop.`, digits=0), nsmall=0, big.mark=",")) %>%
+    dplyr::select(Analysis, Category, all_of(KC_Names)) %>%
+    pivot_wider(names_from=Analysis, names_sep="_", names_vary="slowest",
+                values_from=all_of(KC_Names))
+  print(xtable(Dat), include.rownames=FALSE)
+}
+
+Print_Tbl("Census", 2020, "50 States and DC", "Pop_RE")
+Print_Tbl("Census", 2020, "50 States and DC", "Pop_AgeCat")
+Print_Tbl("Census", 2020, "50 States and DC", "Pop_Sex")
+Print_Tbl("Census", 2020, "50 States and DC", "Pop_UR")
+Print_Tbl("Census", 2020, "50 States and DC", "HH_RO")
+
