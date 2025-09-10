@@ -16,7 +16,7 @@ for (Type in c("Census")) {
 Trend_Viz <- function(Name, Type="Census",
                       Log=TRUE, 
                       Fac_Scales="free", Fac_ggsave=TRUE,
-                      Col_ggsave=FALSE) {
+                      Col_ggsave=TRUE) {
   ## If _ggsave = TRUE, it will save those plots as pngs
   ## Regardless, it saves .Rdas of the plots
   Full <- get(paste(Name, "Res", sep="_"))
@@ -78,12 +78,22 @@ Trend_Viz <- function(Name, Type="Census",
     }
     
     p_col <- get(paste("p", Numerators[length(Numerators)], sep="_")) +
-      scale_y_log10(name="Weight", limits=Trend_Scales[[num]])
+      scale_y_log10(name="Weight", limits=Trend_Scales[[num]]) +
+      labs(title=names(Num_Titled)[Num_Titled==num],
+           color="",
+           linetype="") +
+      guides(linetype=guide_legend(nrow=3, byrow=TRUE),
+             color=guide_legend(nrow=3, byrow=TRUE))
     
     for (num in Numerators[(length(Numerators)-1):1]) {
       p_col <- p_col +
         get(paste("p", num, sep="_")) +
-        scale_y_log10(name="Weight", limits=Trend_Scales[[num]])
+        scale_y_log10(name="Weight", limits=Trend_Scales[[num]]) +
+        labs(title=names(Num_Titled)[Num_Titled==num],
+             color="",
+             linetype="") +
+        guides(linetype=guide_legend(nrow=3, byrow=TRUE),
+               color=guide_legend(nrow=3, byrow=TRUE))
     }
     p_col <- p_col + 
       plot_layout(ncol=1, guides="collect") & theme(legend.position="bottom")
@@ -111,9 +121,10 @@ Trend_Viz <- function(Name, Type="Census",
     
     if (Col_ggsave) {
       ggsave(filename=paste0("figs/",Type,"/",Denom,"/Trend_",Name,"_Col.png"),
-             plot=p_col,
+             plot=p_col &
+               theme(text=element_text(size=10)),
              device=png,
-             width=4, height=6, units="in", dpi=300)
+             width=3, height=7, units="in", dpi=300)
     }
     
     if (Fac_ggsave) {
