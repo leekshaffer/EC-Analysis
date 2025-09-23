@@ -38,18 +38,34 @@ save(file_usm, file=paste0("res/",Type,"/Map_States_", Yr, ".Rda"))
 ## Plotting:
 Breaks <- list(EC=c(0.7, 1.0, 1.4, 2.0, 2.8),
                House=c(0.64, 0.8, 1.0, 1.25, 1.56),
-               Senate=c(0.16, 0.4, 1.0, 2.5, 6.25))
+               Senate=c(0.16, 0.4, 1.0, 2.5, 6.25),
+               Prop=c(0.005, 0.02, 0.08))
 
 plot_usmap(regions="states", exclude="PR",
            data=file_usm,
            color="grey70",
            values="Fixed") +
-  scale_fill_gradient2(name="Weight",
-                       low="#762a83",
-                       high="#1b7837",
-                       midpoint=1) +
-  theme(legend.position="none")
+  scale_fill_gradient(name="",
+                       trans="log",
+                       low="white",
+                       high="white",
+                       na.value="white",
+                       breaks=Breaks[["Prop"]])
 ggsave(filename="figs/Maps/Map_Blank.png",
+       device=png, width=6, height=4, units="in", dpi=300)
+
+plot_usmap(regions="states", exclude="PR",
+           data=file_usm,
+           color="grey70",
+           values="Population Proportion") +
+  scale_fill_gradient(name="Population Proportion",
+                      trans="log",
+                      low="#feedde",
+                      high="#e6550d",
+                      na.value="#feedde",
+                      breaks=Breaks[["Prop"]]) +
+  theme(legend.position="bottom")
+ggsave(filename="figs/Maps/Map_Population.png",
        device=png, width=6, height=4, units="in", dpi=300)
 
 for (num in Numerators) {

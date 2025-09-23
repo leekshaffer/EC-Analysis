@@ -8,7 +8,7 @@ Metrics and visualizations of the distortion in U.S. electoral populations by va
 
 A manuscript describing the methods and results is coming soon.
 
-A Shiny App to interactively display results of the analysis is available at: <https://bit.ly/Elec-Weights>.
+An interactive R Shiny app to interactively display results of the analysis is available at: <https://bit.ly/Elec-Weights>.
 
 Or by using the app.R file in the RShinyApp folder in this repository.
 
